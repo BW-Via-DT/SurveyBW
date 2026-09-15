@@ -1,0 +1,144 @@
+:root {
+  /* Tipografia corporativa */
+  --font-primary: "Gotham", "Montserrat", Arial, sans-serif;
+  --font-fallback: "Montserrat", Arial, sans-serif;
+  --font-system: Arial, sans-serif;
+  --font-asian-chinese: "Source Han Sans SC", "Gotham", "Montserrat", Arial,
+    sans-serif;
+  --font-asian-japanese: "Source Han Sans", "Gotham", "Montserrat", Arial,
+    sans-serif;
+  --font-asian-korean: "Source Han Sans KR", "Gotham", "Montserrat", Arial,
+    sans-serif;
+
+  /* Pesos de fonte */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Tamanhos de fonte */
+  --font-size-xs: 0.75rem; /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-base: 1rem; /* 16px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --font-size-xl: 1.25rem; /* 20px */
+  --font-size-2xl: 1.5rem; /* 24px */
+  --font-size-3xl: 1.875rem; /* 30px */
+  --font-size-4xl: 2.25rem; /* 36px */
+  --font-size-5xl: 3rem; /* 48px */
+
+  /* Line heights */
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* Paleta de cores corporativa */
+  --bw-blue: #00386c;
+  --sea-green: #0e8187;
+  --technology-blue: #2efad9;
+  --forest-green: #0d9e71;
+  --sustainability-green: #18dd75;
+
+  /* Cores principais baseadas na paleta */
+  --primary-color: var(--technology-blue);
+  --primary-hover: var(--sea-green);
+  --primary-shadow: rgba(46, 250, 217, 0.3);
+  --primary-light: rgba(46, 250, 217, 0.1);
+
+  /* Cores secundárias */
+  --secondary-color: var(--bw-blue);
+  --accent-color: var(--sustainability-green);
+  --success-color: var(--forest-green);
+  --info-color: var(--sea-green);
+
+  /* Gradientes usando a paleta corporativa */
+  --gradient-primary: linear-gradient(
+    135deg,
+    var(--technology-blue),
+    var(--sea-green)
+  );
+  --gradient-secondary: linear-gradient(
+    135deg,
+    var(--bw-blue),
+    var(--sea-green)
+  );
+  --gradient-success: linear-gradient(
+    135deg,
+    var(--forest-green),
+    var(--sustainability-green)
+  );
+  --gradient-info: linear-gradient(
+    135deg,
+    var(--sea-green),
+    var(--technology-blue)
+  );
+  --gradient-accent: linear-gradient(
+    135deg,
+    var(--sustainability-green),
+    var(--forest-green)
+  );
+  --gradient-dark: linear-gradient(135deg, var(--bw-blue), var(--sea-green));
+  --gradient-error: linear-gradient(135deg, #dc3545, #a71d31);
+  --gradient-neutral: linear-gradient(135deg, #6c757d, #495057);
+
+  /* Variações de opacidade das cores corporativas */
+  --bw-blue-10: rgba(0, 56, 108, 0.1);
+  --bw-blue-20: rgba(0, 56, 108, 0.2);
+  --bw-blue-50: rgba(0, 56, 108, 0.5);
+
+  --sea-green-10: rgba(14, 129, 135, 0.1);
+  --sea-green-20: rgba(14, 129, 135, 0.2);
+  --sea-green-50: rgba(14, 129, 135, 0.5);
+
+  --technology-blue-10: rgba(46, 250, 217, 0.1);
+  --technology-blue-20: rgba(46, 250, 217, 0.2);
+  --technology-blue-50: rgba(46, 250, 217, 0.5);
+
+  --forest-green-10: rgba(13, 158, 113, 0.1);
+  --forest-green-20: rgba(13, 158, 113, 0.2);
+  --forest-green-50: rgba(13, 158, 113, 0.5);
+
+  --sustainability-green-10: rgba(24, 221, 117, 0.1);
+  --sustainability-green-20: rgba(24, 221, 117, 0.2);
+  --sustainability-green-50: rgba(24, 221, 117, 0.5);
+
+  /* Cores de fundo */
+  --bg-dark: #1a1a1a;
+  --bg-overlay: rgba(0, 0, 0, 0.4);
+  --bg-navbar: var(--bw-blue-20);
+  --bg-card: var(--bw-blue-10);
+
+  /* Cores de texto */
+  --text-white: #ffffff;
+  --text-white-75: rgba(255, 255, 255, 0.75);
+  --text-white-50: rgba(255, 255, 255, 0.5);
+  --text-black: #000000;
+  --text-primary: var(--technology-blue);
+  --text-secondary: var(--sea-green);
+  --text-dark: var(--bw-blue);
+
+  /* Sombras */
+  --shadow-text: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 4px 8px rgba(0, 0, 0, 0.2);
+  --shadow-card-reduced: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-primary: 0 4px 15px var(--technology-blue-20);
+  --shadow-secondary: 0 4px 15px var(--bw-blue-20);
+
+  /* Transições */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease-in-out;
+  --transition-slow: 0.5s ease;
+
+  /* Bordas */
+  --border-radius: 8px;
+  --border-radius-pill: 50px;
+  --border-primary: 1px solid var(--technology-blue);
+  --border-secondary: 1px solid var(--sea-green);
+
+  /* Espaçamentos */
+  --gap-xs: 5px;
+  --gap-small: 10px;
+  --gap-medium: 20px;
+  --gap-large: 40px;
+}

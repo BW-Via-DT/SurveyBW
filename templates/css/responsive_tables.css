@@ -1,0 +1,64 @@
+@media (max-width: 768px) {
+  table thead {
+    display: none;
+  }
+
+  table tbody,
+  table tr {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1.3rem;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  table td {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px;
+    border-bottom: 1px solid #dee2e6;
+  }
+
+  table td:last-child {
+    border-bottom: none;
+  }
+
+  table td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    flex: 1;
+    text-align: left;
+    padding-right: 10px;
+  }
+
+  .separator-row {
+    display: none;
+  }
+
+  .action-buttons {
+    display: block !important;
+    margin-right: 0.2rem;
+    justify-content: center !important;
+  }
+}
+
+body:not(.sidebar-toggled) .topbar {
+  display: none;
+}
+
+body.sidebar-toggled .topbar {
+  display: block;
+}
+
+td {
+  font-size: 0.91rem;
+}
+
+#filterToggleBtn {
+  transition: color 0.3s ease, background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+#filterIcon {
+  transition: transform 0.3s ease;
+}

@@ -1,0 +1,322 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap");
+body {
+  font-family: "Montserrat", sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-color: #000;
+}
+
+/* Video Background */
+.video-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  opacity: 0.7; /* Torna o vídeo opaco */
+}
+
+.video-background video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Dark overlay for better text readability */
+.video-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: -1;
+}
+
+.navbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 10;
+  padding: 10px 0;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  padding-left: 0;
+}
+
+.navbar-brand img {
+  height: 60px;
+  align-self: center;
+  margin-right: 5px;
+}
+
+.nav-link {
+  color: #fff !important;
+  transition: color 0.3s ease;
+  position: relative;
+  padding: 10px 15px;
+  font-size: 1.1rem;
+}
+
+.nav-link:hover {
+  color: #2efad9 !important;
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #2efad9;
+  transform: scaleX(0);
+  transform-origin: bottom right;
+  transition: transform 0.3s ease;
+}
+
+.nav-link:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+.navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath stroke='white' stroke-width='2' d='M5 7h20M5 15h20M5 23h20'/%3E%3C/svg%3E");
+}
+
+.content-wrapper {
+  min-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.title {
+  position: relative;
+  z-index: 2;
+  color: white;
+  text-align: center;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 3rem;
+}
+
+.title-small {
+  position: relative;
+  z-index: 2;
+  color: white;
+  text-align: center;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+}
+
+.footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  color: white;
+  padding: 15px;
+  text-align: center;
+  z-index: 3;
+}
+
+/* Estilos melhorados para o Modal de Login */
+.modal-content {
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border: none;
+}
+
+.modal-header {
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 1rem;
+}
+
+.modal-title {
+  font-weight: bold;
+  color: #051729;
+  font-size: 1.5rem;
+}
+
+.form-control {
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  font-size: 1rem;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  border-color: #2efad9;
+  box-shadow: 0 0 0 0.25rem rgba(46, 250, 217, 0.25);
+}
+
+.btn-login {
+  background-color: #051729;
+  color: white;
+  border-radius: 10px;
+  padding: 1rem;
+  width: 100%;
+  border: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-login:hover {
+  background-color: #2efad9;
+  transform: translateY(-2px);
+}
+
+.layer-btn {
+  background-color: #0d9e71;
+  color: white;
+  border-radius: 10px;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  width: 100%;
+  border: none;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.layer-btn:hover {
+  background-color: #2efad9;
+  transform: translateY(-3px);
+}
+
+.btn-register {
+  background: linear-gradient(135deg, #18dd75 0%, #0d9e71 100%);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px #0e8187;
+}
+
+.btn-register:hover {
+  background: linear-gradient(135deg, #106ebe 0%, #005a9e 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 120, 212, 0.4);
+  color: white;
+}
+
+.btn-register:active {
+  transform: translateY(0);
+}
+
+.btn-register:focus {
+  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.2);
+  outline: none;
+}
+
+.btn-register:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Estilos do Formulário de Registo */
+.form-select {
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  font-size: 1rem;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+  background-color: white;
+}
+
+.form-select:focus {
+  border-color: #2efad9;
+  box-shadow: 0 0 0 0.25rem rgba(46, 250, 217, 0.25);
+}
+
+.btn-windows-login {
+  background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.3);
+}
+
+.btn-windows-login:hover {
+  background: linear-gradient(135deg, #106ebe 0%, #005a9e 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 120, 212, 0.4);
+  color: white;
+}
+
+.btn-windows-login:active {
+  transform: translateY(0);
+}
+
+.btn-windows-login:focus {
+  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.2);
+  outline: none;
+}
+
+.btn-windows-login:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (max-width: 768px) {
+  .footer {
+    font-size: 11px;
+  }
+
+  .navbar-brand img {
+    height: 60px;
+    margin-right: 5px;
+  }
+
+  .title,
+  .title-small {
+    top: 30px;
+  }
+
+  .navbar-nav {
+    text-align: center;
+  }
+
+  .nav-item {
+    padding: 0 10px;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .title-small {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .title {
+    font-size: 2rem;
+  }
+
+  .title-small {
+    font-size: 1rem;
+  }
+}

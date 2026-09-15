@@ -1,0 +1,45 @@
+<div
+  class="modal fade"
+  id="modalForgotPassword"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="modalForgotPasswordLabel"
+  aria-hidden="true"
+  data-backdrop="static">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalForgotPasswordLabel">
+          Recuperar Palavra Passe
+        </h5>
+        <button
+          type="button"
+          class="close"
+          data-bs-dismiss="modal"
+          aria-label="Fechar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="forgotPasswordForm">
+          <div class="form-group">
+            <label for="recover-username">Username:</label>
+            <input
+              type="text"
+              class="form-control"
+              id="recover-username"
+              name="recover_username"
+              required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">
+            Recuperar Palavra Passe
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  {% include "utils/javascript/recoverPass.js" %}
+</script>

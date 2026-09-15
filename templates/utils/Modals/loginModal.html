@@ -1,0 +1,93 @@
+<div
+  class="modal fade"
+  id="modalLogin"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="loginModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-white">
+        <h5 class="modal-title" id="modalTitle">
+          <i class="fas fa-sign-in-alt me-2"></i>Sign In
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form id="loginForm">
+          <div class="form-group mb-3">
+            <label for="username" class="form-label">
+              <i class="fas fa-user me-2"></i>Username
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              class="form-control"
+              placeholder="Enter your username"
+              required
+            />
+          </div>
+          <div class="form-group mb-3">
+            <label for="password" class="form-label">
+              <i class="fas fa-lock me-2"></i>Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-control"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
+          <div class="alert alert-danger d-none" id="login-error">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span id="login-error-message">Invalid credentials</span>
+          </div>
+
+          <div class="form-group mb-3" id="forgotPasswordGroup">
+            <a
+              href="#"
+              class="text-muted forgotPasswordLink"
+              id="forgotPasswordLink"
+            >
+              <i class="fas fa-key me-2"></i>Forgot your password?
+            </a>
+          </div>
+          <div class="d-grid gap-2">
+            <button
+              type="submit"
+              class="btn btn-primary btn-lg"
+              id="loginButton"
+            >
+              <i class="fas fa-sign-in-alt me-2"></i>Sign In
+            </button>
+          </div>
+          <div class="text-center mt-3">
+            <small class="text-muted"
+              >Don't have an account?
+              <a
+                href="#"
+                data-bs-toggle="modal"
+                data-bs-target="#modalRegister"
+                data-bs-dismiss="modal"
+                >Register here</a
+              >
+            </small>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include 'utils/Modals/resetPasswordModal.html' %} {% include
+'utils/Modals/firstLoginModal.html' %}

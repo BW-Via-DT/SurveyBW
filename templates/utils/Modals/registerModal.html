@@ -1,0 +1,116 @@
+<div
+  class="modal fade"
+  id="modalRegister"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="modalRegisterLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-white">
+        <h5 class="modal-title" id="modalRegisterLabel">
+          <i class="fas fa-user-plus me-2"></i>Create Account
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form id="registerForm">
+          <div class="form-group mb-3">
+            <label for="reg_name" class="form-label">
+              <i class="fas fa-user me-2"></i>Full Name
+            </label>
+            <input
+              type="text"
+              class="form-control"
+              id="reg_name"
+              name="name"
+              placeholder="Enter your full name"
+              required
+            />
+          </div>
+          <div class="form-group mb-3">
+            <label for="reg_email" class="form-label">
+              <i class="fas fa-envelope me-2"></i>Email Address
+            </label>
+            <input
+              type="email"
+              class="form-control"
+              id="reg_email"
+              name="email"
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+          <div class="form-group mb-3">
+            <label for="reg_username" class="form-label">
+              <i class="fas fa-user-circle me-2"></i>Username
+            </label>
+            <input
+              type="text"
+              class="form-control"
+              id="reg_username"
+              name="username"
+              placeholder="Choose a username"
+              required
+            />
+          </div>
+          <div class="form-group mb-3">
+            <label for="reg_password" class="form-label">
+              <i class="fas fa-lock me-2"></i>Password
+            </label>
+            <input
+              type="password"
+              class="form-control"
+              id="reg_password"
+              name="password"
+              placeholder="Create a password"
+              required
+            />
+          </div>
+          <div class="form-group mb-3">
+            <label for="reg_password_confirm" class="form-label">
+              <i class="fas fa-lock me-2"></i>Confirm Password
+            </label>
+            <input
+              type="password"
+              class="form-control"
+              id="reg_password_confirm"
+              name="password_confirm"
+              placeholder="Confirm your password"
+              required
+            />
+          </div>
+          <div class="alert alert-danger d-none" id="register-error">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span id="register-error-message"
+              >Registration failed. Please try again.</span
+            >
+          </div>
+          <div class="d-grid gap-2 mt-3">
+            <button type="submit" class="btn btn-success btn-lg">
+              <i class="fas fa-user-check me-2"></i>Create Account
+            </button>
+          </div>
+        </form>
+        <div class="text-center mt-3">
+          <small class="text-muted"
+            >Already have an account?
+            <a
+              href="#"
+              data-bs-toggle="modal"
+              data-bs-target="#modalLogin"
+              data-bs-dismiss="modal"
+              >Sign in here</a
+            >
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,402 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ form_title or 'Formulário' }}{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --teal: #0D9488;
+    --teal-light: #E6FBF8;
+    --ink: #101828;
+    --ink-soft: #475467;
+    --ink-faint: #98A2B3;
+    --line: #E4E7EC;
+    --bg: #F7F8FA;
+    --danger: #D14343;
+    --danger-light: #FBEAEA;
+    --radius: 14px;
+  }
+
+  #public-survey-page {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    min-height: calc(100vh - 80px);
+    padding: 2rem 1rem 3rem;
+    color: var(--ink);
+  }
+
+  .response-shell {
+    max-width: 920px;
+    margin: 0 auto;
+  }
+
+  .survey-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: 0 12px 28px rgba(16, 24, 40, 0.04);
+    overflow: hidden;
+  }
+
+  .survey-header {
+    background: linear-gradient(135deg, #0D9488 0%, #0B7E75 100%);
+    color: #fff;
+    padding: 1.5rem 1.5rem 1.1rem;
+  }
+
+  .survey-header h1 {
+    margin: 0 0 0.4rem;
+    font-size: clamp(1.7rem, 2vw, 2.3rem);
+    font-weight: 700;
+  }
+
+  .survey-header p {
+    margin: 0;
+    color: rgba(255,255,255,0.9);
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+
+  .survey-body {
+    padding: 1.5rem;
+  }
+
+  .question {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--teal);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 1rem;
+  }
+
+  .question-head {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-bottom: 0.6rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .question-index {
+    color: var(--teal);
+    font-weight: 700;
+  }
+
+  .required-mark {
+    color: var(--danger);
+    font-weight: 700;
+  }
+
+  .question-help {
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .field-control {
+    width: 100%;
+    border: 1px solid #D0D5DD;
+    border-radius: 8px;
+    padding: 0.72rem 0.8rem;
+    background: #fff;
+    color: var(--ink);
+    font-size: 0.96rem;
+  }
+
+  .field-control:focus {
+    border-color: var(--teal);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+  }
+
+  textarea.field-control {
+    min-height: 110px;
+    resize: vertical;
+  }
+
+  .option-list {
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 0.35rem;
+  }
+
+  .option-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--ink);
+    font-size: 0.95rem;
+  }
+
+  .option-item input {
+    margin: 0;
+    accent-color: var(--teal);
+  }
+
+  .submit-wrap {
+    padding-top: 0.5rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .btn-submit {
+    border: none;
+    background: var(--teal);
+    color: #fff;
+    border-radius: 10px;
+    padding: 0.75rem 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-submit:hover {
+    background: #0b7e75;
+  }
+
+  .alert-inline {
+    display: none;
+    padding: 0.8rem 1rem;
+    border-radius: 10px;
+    font-size: 0.92rem;
+    margin-top: 0.5rem;
+  }
+
+  .alert-inline.error {
+    display: block;
+    background: var(--danger-light);
+    color: var(--danger);
+    border: 1px solid #F3C6C6;
+  }
+
+  .alert-inline.success {
+    display: block;
+    background: #E7F8F5;
+    color: #0B7E75;
+    border: 1px solid #BDE9E1;
+  }
+
+  @media (max-width: 640px) {
+    .survey-body {
+      padding: 1rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="public-survey-page">
+  <div class="response-shell">
+    <div class="survey-card">
+      <div class="survey-header">
+        <h1>{{ form_title or 'Formulário' }}</h1>
+        {% if form_description %}
+          <p>{{ form_description }}</p>
+        {% endif %}
+      </div>
+
+      <div class="survey-body">
+        <form id="publicSurveyForm" novalidate>
+          {% if not fields or fields|length == 0 %}
+            <div class="question">
+              <div class="question-head">
+                <span>Este formulário ainda não tem perguntas disponíveis.</span>
+              </div>
+            </div>
+          {% else %}
+            {% for field in fields %}
+              <div class="question" data-field-id="{{ field.id }}" data-field-type="{{ field.type }}">
+                <div class="question-head">
+                  <span class="question-index">{{ loop.index }}.</span>
+                  <span>{{ field.label }}</span>
+                  {% if field.required %}<span class="required-mark">*</span>{% endif %}
+                </div>
+
+                {% if field.help_text %}
+                  <div class="question-help">{{ field.help_text }}</div>
+                {% endif %}
+
+                {% if field.type == 'text' %}
+                  <input class="field-control" type="text" name="field_{{ field.id }}" {% if field.required %}required{% endif %} placeholder="Resposta..." />
+
+                {% elif field.type == 'textarea' %}
+                  <textarea class="field-control" name="field_{{ field.id }}" {% if field.required %}required{% endif %} placeholder="Resposta..."></textarea>
+
+                {% elif field.type == 'number' %}
+                  <input class="field-control" type="number" name="field_{{ field.id }}" {% if field.required %}required{% endif %} placeholder="0" />
+
+                {% elif field.type == 'date' %}
+                  <input class="field-control" type="date" name="field_{{ field.id }}" {% if field.required %}required{% endif %} />
+
+                {% elif field.type == 'email' %}
+                  <input class="field-control" type="email" name="field_{{ field.id }}" {% if field.required %}required{% endif %} placeholder="exemplo@empresa.pt" />
+
+                {% elif field.type in ['single_choice', 'multiple_choice'] %}
+                  <div class="option-list">
+                    {% for option in field.options %}
+                      <label class="option-item">
+                        <input
+                          type="{{ 'radio' if field.type == 'single_choice' else 'checkbox' }}"
+                          name="field_{{ field.id }}{% if field.type == 'multiple_choice' %}_{{ loop.index }}{% endif %}"
+                          value="{{ option.id }}"
+                          {% if field.required %}required{% endif %}
+                        >
+                        <span>{{ option.label }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+
+                {% elif field.type == 'dropdown' %}
+                  <select class="field-control" name="field_{{ field.id }}" {% if field.required %}required{% endif %}>
+                    <option value="">Selecione uma opção</option>
+                    {% for option in field.options %}
+                      <option value="{{ option.id }}">{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+
+                {% elif field.type == 'rating' %}
+                  <select class="field-control" name="field_{{ field.id }}" {% if field.required %}required{% endif %}>
+                    <option value="">Classifique de 1 a 5</option>
+                    <option value="1">1 - Muito fraco</option>
+                    <option value="2">2 - Fraco</option>
+                    <option value="3">3 - Médio</option>
+                    <option value="4">4 - Bom</option>
+                    <option value="5">5 - Excelente</option>
+                  </select>
+                {% endif %}
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <div id="formMessage" class="alert-inline" role="alert"></div>
+
+          <div class="submit-wrap">
+            <button type="submit" class="btn-submit">Enviar resposta</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce() }}">
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('publicSurveyForm');
+    const messageBox = document.getElementById('formMessage');
+    const surveyToken = {{ token | tojson }};
+
+    if (!form) return;
+
+    function buildAnswers() {
+      const answers = [];
+
+      document.querySelectorAll('.question[data-field-id]').forEach(function (question) {
+        const fieldId = Number(question.dataset.fieldId);
+        const fieldType = question.dataset.fieldType;
+
+        let values = [];
+
+        if (fieldType === 'single_choice' || fieldType === 'dropdown' || fieldType === 'rating' || fieldType === 'text' || fieldType === 'textarea' || fieldType === 'number' || fieldType === 'date' || fieldType === 'email') {
+          const control = question.querySelector('input, select, textarea');
+          if (control) {
+            if (control.type === 'checkbox') {
+              values = control.checked ? [control.value] : [];
+            } else {
+              values = control.value !== undefined ? [control.value] : [];
+            }
+          }
+        } else if (fieldType === 'multiple_choice') {
+          const checked = Array.from(question.querySelectorAll('input[type="checkbox"]:checked'));
+          values = checked.map(function (input) {
+            return input.value;
+          });
+        }
+
+        if (values.length > 0) {
+          answers.push({ field_id: fieldId, value: values.length === 1 ? values[0] : values });
+        } else if (fieldType !== 'multiple_choice') {
+          const emptyValue = question.querySelector('input, select, textarea');
+          if (emptyValue && emptyValue.hasAttribute('required')) {
+            answers.push({ field_id: fieldId, value: '' });
+          }
+        }
+      });
+
+      return answers;
+    }
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+
+      const answers = buildAnswers();
+      const requiredQuestions = Array.from(document.querySelectorAll('.question[data-field-id]'))
+        .filter(function (question) {
+          const field = question.querySelector('[required]');
+          return !!field;
+        });
+
+      let invalid = false;
+
+      requiredQuestions.forEach(function (question) {
+        const fieldType = question.dataset.fieldType;
+        const controls = Array.from(question.querySelectorAll('input, select, textarea'));
+
+        const hasValue = controls.some(function (control) {
+          if (control.type === 'checkbox' || control.type === 'radio') {
+            return control.checked;
+          }
+          return String(control.value || '').trim() !== '';
+        });
+
+        if (!hasValue) {
+          invalid = true;
+        }
+
+        if (fieldType === 'multiple_choice') {
+          const checked = question.querySelectorAll('input[type="checkbox"]:checked').length;
+          if (checked === 0) invalid = true;
+        }
+      });
+
+      if (invalid) {
+        messageBox.className = 'alert-inline error';
+        messageBox.textContent = 'Preenche todos os campos obrigatórios antes de enviar.';
+        return;
+      }
+
+      const payload = { answers: answers };
+
+      fetch('/r/' + encodeURIComponent(surveyToken), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify(payload)
+      })
+        .then(async function (response) {
+          const data = await response.json().catch(function () {
+            return {};
+          });
+
+          if (!response.ok) {
+            throw new Error(data.message || 'Não foi possível guardar a resposta.');
+          }
+
+          messageBox.className = 'alert-inline success';
+          messageBox.textContent = 'Resposta registada com sucesso. Obrigado.';
+          form.reset();
+        })
+        .catch(function (error) {
+          messageBox.className = 'alert-inline error';
+          messageBox.textContent = error.message || 'Não foi possível guardar a resposta.';
+        });
+    });
+  });
+</script>
+{% endblock %}

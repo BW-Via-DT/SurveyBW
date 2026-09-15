@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+
+{% block title %}Respostas{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal: #0D9488;
+    --teal-light: #E6FBF8;
+    --ink: #101828;
+    --ink-soft: #475467;
+    --ink-faint: #98A2B3;
+    --line: #E4E7EC;
+    --bg: #F7F8FA;
+    --radius: 10px;
+  }
+
+  #responses-page {
+    min-height: calc(100vh - 60px);
+    margin: -1.5rem -1.5rem 0;
+    padding: 1.75rem;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+  }
+
+  .responses-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .responses-heading { display: flex; gap: 0.8rem; align-items: flex-start; }
+  .responses-mark { width: 3px; min-height: 48px; margin-top: 0.15rem; border-radius: 3px; background: var(--teal); }
+  .responses-kicker { margin: 0 0 0.25rem; color: var(--teal); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  .responses-title { margin: 0; font-size: 1.55rem; font-weight: 700; }
+  .responses-subtitle { margin: 0.35rem 0 0; color: var(--ink-soft); font-size: 0.88rem; }
+
+  .responses-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.58rem 0.85rem;
+    background: #fff;
+    color: var(--ink-soft);
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .responses-button:hover { border-color: var(--teal); color: var(--teal); }
+  .responses-button.primary { border-color: var(--teal); background: var(--teal); color: #fff; }
+  .responses-button.primary:hover { background: #0B7E75; color: #fff; }
+
+  .responses-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+  .responses-summary { display: flex; align-items: baseline; gap: 0.5rem; }
+  .responses-count { font-size: 1.5rem; font-weight: 700; }
+  .responses-count-label { color: var(--ink-soft); font-size: 0.84rem; }
+  .responses-search { width: min(320px, 100%); border: 1px solid var(--line); border-radius: 8px; padding: 0.58rem 0.75rem; background: #fff; color: var(--ink); font-size: 0.84rem; }
+  .responses-search:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,.1); }
+
+  .response-list { display: grid; gap: 0.85rem; }
+  .response-item { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; box-shadow: 0 5px 16px rgba(16,24,40,.025); }
+  .response-item-head { display: flex; justify-content: space-between; gap: 1rem; padding: 0.85rem 1rem; border-bottom: 1px solid var(--line); background: #FCFDFD; }
+  .response-number { color: var(--teal); font-size: 0.78rem; font-weight: 700; }
+  .response-meta { color: var(--ink-faint); font-size: 0.78rem; }
+  .response-answers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }
+  .response-answer { min-width: 0; padding: 0.85rem 1rem; border-bottom: 1px solid #F0F2F5; }
+  .response-answer:nth-last-child(-n+2) { border-bottom: 0; }
+  .answer-label { margin-bottom: 0.3rem; color: var(--ink-faint); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+  .answer-value { color: var(--ink); font-size: 0.88rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .answer-value.empty { color: var(--ink-faint); font-style: italic; }
+  .responses-empty { padding: 3rem 1rem; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--ink-faint); text-align: center; background: rgba(255,255,255,.6); }
+  .responses-empty i { display: block; margin-bottom: 0.65rem; color: var(--teal); font-size: 1.8rem; }
+  .responses-loading { padding: 2.5rem; color: var(--ink-faint); text-align: center; }
+
+  @media (max-width: 700px) {
+    #responses-page { padding: 1rem; }
+    .responses-header, .responses-toolbar { align-items: stretch; flex-direction: column; }
+    .responses-button.primary { justify-content: center; }
+    .responses-search { width: 100%; }
+    .response-answers { grid-template-columns: 1fr; }
+    .response-answer:nth-last-child(-n+2) { border-bottom: 1px solid #F0F2F5; }
+    .response-answer:last-child { border-bottom: 0; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="responses-page">
+  <header class="responses-header">
+    <div class="responses-heading">
+      <span class="responses-mark" aria-hidden="true"></span>
+      <div>
+        <p class="responses-kicker">Resultados</p>
+        <h1 class="responses-title" id="responsesTitle">Respostas</h1>
+        <p class="responses-subtitle">Consulta as respostas submetidas ao teu formulário.</p>
+      </div>
+    </div>
+    <button class="responses-button" id="btnBack" type="button"><i class="fas fa-arrow-left"></i> Voltar</button>
+  </header>
+
+  <div class="responses-toolbar">
+    <div class="responses-summary"><span class="responses-count" id="responsesCount">0</span><span class="responses-count-label">respostas recebidas</span></div>
+    <div style="display:flex; gap:0.5rem; align-items:center;">
+      <input class="responses-search" id="responsesSearch" type="search" placeholder="Pesquisar respostas..." aria-label="Pesquisar respostas">
+      <button class="responses-button primary" id="btnExport" type="button" title="Exportar CSV"><i class="fas fa-download"></i> Exportar</button>
+    </div>
+  </div>
+
+  <div id="responsesLoading" class="responses-loading">A carregar respostas...</div>
+  <div id="responsesEmpty" class="responses-empty" hidden><i class="fas fa-inbox"></i>Ainda não existem respostas para este formulário.</div>
+  <div id="responseList" class="response-list"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ csp_nonce() }}">
+  const FORM_ID = {{ form_id | tojson }};
+  const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const loading = document.getElementById('responsesLoading');
+    const empty = document.getElementById('responsesEmpty');
+    const list = document.getElementById('responseList');
+    const search = document.getElementById('responsesSearch');
+    const count = document.getElementById('responsesCount');
+    const title = document.getElementById('responsesTitle');
+    let responses = [];
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, function (character) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[character];
+      });
+    }
+
+    function render(items) {
+      count.textContent = items.length;
+      if (!items.length) {
+        list.innerHTML = '';
+        empty.hidden = false;
+        return;
+      }
+      empty.hidden = true;
+      list.innerHTML = items.map(function (response, index) {
+        const answerHtml = response.answers.map(function (answer) {
+          const value = String(answer.value || '').trim();
+          return `<div class="response-answer">
+            <div class="answer-label">${escapeHtml(answer.label)}</div>
+            <div class="answer-value ${value ? '' : 'empty'}">${value ? escapeHtml(value) : 'Sem resposta'}</div>
+          </div>`;
+        }).join('');
+        return `<article class="response-item">
+          <div class="response-item-head">
+            <span class="response-number">Resposta #${response.id}</span>
+            <span class="response-meta">${escapeHtml(response.submitted_at)}</span>
+          </div>
+          <div class="response-answers">${answerHtml}</div>
+        </article>`;
+      }).join('');
+    }
+
+    function applySearch() {
+      const query = search.value.trim().toLowerCase();
+      if (!query) {
+        render(responses);
+        return;
+      }
+      render(responses.filter(function (response) {
+        return `${response.submitted_at} ${response.answers.map(answer => `${answer.label} ${answer.value}`).join(' ')}`.toLowerCase().includes(query);
+      }));
+    }
+
+    function exportCsv() {
+      if (!responses.length) return;
+      const labels = responses[0].answers.map(answer => answer.label);
+      const rows = [['Resposta', 'Data', ...labels], ...responses.map(response => [
+        response.id,
+        response.submitted_at,
+        ...response.answers.map(answer => answer.value || '')
+      ])];
+      const csv = rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(';')).join('\n');
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'respostas-formulario.csv';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    search.addEventListener('input', applySearch);
+    document.getElementById('btnBack').addEventListener('click', function () { window.location.href = '/surveys'; });
+    document.getElementById('btnExport').addEventListener('click', exportCsv);
+
+    fetch(`/api/surveys/${FORM_ID}/responses`, { headers: { 'X-CSRFToken': csrfToken } })
+      .then(async function (response) {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.success) throw new Error(data.message || 'Não foi possível carregar as respostas.');
+        return data;
+      })
+      .then(function (data) {
+        responses = data.responses || [];
+        title.textContent = data.form.title || 'Respostas';
+        loading.hidden = true;
+        render(responses);
+      })
+      .catch(function (error) {
+        loading.hidden = true;
+        empty.hidden = false;
+        empty.innerHTML = `<i class="fas fa-exclamation-circle"></i>${escapeHtml(error.message)}`;
+      });
+  });
+</script>
+{% endblock %}

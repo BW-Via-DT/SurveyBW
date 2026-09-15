@@ -1,0 +1,14 @@
+flask
+pyodbc
+flask_toastr
+flask_cors
+pandas
+openpyxl
+flask_mail
+argon2-cffi
+flask-limiter
+flask-wtf
+flask-talisman
+python-dotenv
+pyotp 
+qrcode[pil]

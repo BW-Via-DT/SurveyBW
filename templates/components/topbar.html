@@ -1,0 +1,66 @@
+<div class="topbar" id="topbar">
+  <button id="sidebarToggleTop" class="btn btn-link rounded-circle me-3">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <div class="title">{{ page_title or 'Application Dashboard' }}</div>
+
+  <div class="user-info dropdown">
+    {% if is_logged_in %}
+      {% set display_name = session.get('name') or session.get('username') %}
+      {% set display_email = session.get('email') %}
+      {% set operator_number = session.get('operator_number') %}
+
+      <a
+        class="nav-link dropdown-toggle"
+        href="#"
+        id="userDropdown"
+        role="button"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+      >
+        <span class="me-2 d-none d-lg-inline small fw-bold">
+          {{ display_name }}
+        </span>
+
+        <img src="{{ url_for('static', filename='content/perfil_image.png') }}" alt="User" />
+      </a>
+
+      <div
+        class="dropdown-menu dropdown-menu-end shadow animated--fade-in"
+        aria-labelledby="userDropdown"
+        data-bs-offset="0,50"
+      >
+        {% set role_labels = {
+          'admin': 'Administrador',
+          'normal': 'Utilizador',
+          'user': 'Utilizador'
+        } %}
+
+        <h6 class="dropdown-header">
+          {{ role_labels.get(user_role, 'Utilizador') }}
+        </h6>
+
+        <div class="dropdown-divider"></div>
+
+        <a
+          class="dropdown-item"
+          href="#"
+          data-bs-toggle="modal"
+          data-bs-target="#changePasswordModal"
+        >
+          <i class="fas fa-key fa-sm fa-fw me-2"></i>
+          Alterar Password
+        </a>
+
+        <a class="dropdown-item" href="/logout">
+          <i class="fas fa-sign-out-alt fa-sm fa-fw me-2"></i>
+          Logout
+        </a>
+      </div>
+    {% else %}
+      <span class="me-2 d-none d-lg-inline small fw-bold">Not logged in</span>
+      <img src="{{ url_for('static', filename='content/perfil_image.png') }}" alt="User" />
+    {% endif %}
+  </div>
+</div>

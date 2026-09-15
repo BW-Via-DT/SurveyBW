@@ -1,0 +1,497 @@
+{% extends 'base.html' %}
+
+{% block title %}Meus Formulários{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-grid.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/styles/ag-theme-alpine.css">
+
+<style>
+  :root {
+    --teal: #0D9488;
+    --teal-light: #E6FBF8;
+    --ink: #101828;
+    --ink-soft: #475467;
+    --ink-faint: #98A2B3;
+    --line: #E4E7EC;
+    --bg: #F7F8FA;
+    --danger: #D14343;
+    --danger-light: #FBEAEA;
+    --radius: 10px;
+  }
+
+  #sv-page {
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    margin: -1.5rem -1.5rem 0;
+    padding: 1.75rem;
+    min-height: calc(100vh - 60px);
+  }
+
+  .sv-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .sv-heading { display: flex; align-items: flex-start; gap: 0.8rem; }
+  .sv-heading-mark {
+    width: 3px;
+    min-height: 42px;
+    border-radius: 3px;
+    background: var(--teal);
+    margin-top: 0.15rem;
+  }
+  .sv-header h4 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .sv-header p {
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+    margin: 0.3rem 0 0;
+  }
+
+  .btn-sv-primary {
+    background: var(--teal);
+    border: 1px solid var(--teal);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.86rem;
+    border-radius: 8px;
+    padding: 0.58rem 0.95rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .btn-sv-primary:hover { background: #0B7E75; border-color: #0B7E75; color: #fff; }
+
+  .sv-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 0.55rem;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.035);
+  }
+
+  #formsGrid {
+    height: 520px;
+    width: 100%;
+  }
+
+  .sv-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0.18rem 0.42rem;
+    border-radius: 999px;
+  }
+  .sv-badge .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .sv-badge.draft { background: #F2F4F7; color: var(--ink-soft); }
+  .sv-badge.draft .dot { background: var(--ink-faint); }
+  .sv-badge.published { background: var(--teal-light); color: var(--teal); }
+  .sv-badge.published .dot { background: var(--teal); }
+  .sv-badge.closed { background: var(--danger-light); color: var(--danger); }
+  .sv-badge.closed .dot { background: var(--danger); }
+
+  .sv-grid-action {
+    border: none;
+    background: transparent;
+    color: var(--ink-faint);
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.2rem;
+  }
+  .sv-grid-action:hover { background: #F2F4F7; color: var(--ink); }
+  .sv-grid-action.danger:hover { background: var(--danger-light); color: var(--danger); }
+
+  .sv-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--ink-faint);
+  }
+  .sv-empty i { font-size: 2rem; margin-bottom: 0.75rem; display: block; color: var(--line); }
+
+  .sv-loading {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--ink-faint);
+    font-size: 0.9rem;
+  }
+
+  #formsGrid .ag-header-cell-label {
+    color: var(--ink-soft);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  #formsGrid .ag-cell {
+    color: var(--ink-soft);
+    font-size: 0.84rem;
+  }
+  #formsGrid .ag-cell:first-child {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  @media (max-width: 640px) {
+    #sv-page { padding: 1rem; }
+    .sv-header { align-items: flex-start; flex-direction: column; }
+    .sv-header .btn-sv-primary { width: 100%; justify-content: center; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="sv-page">
+  <div class="sv-header">
+    <div class="sv-heading">
+      <span class="sv-heading-mark" aria-hidden="true"></span>
+      <div>
+      <h4>Os meus formulários</h4>
+      <p>Cria, edita e acompanha as respostas dos teus formulários.</p>
+      </div>
+    </div>
+    <button id="btnNovoFormulario" class="btn-sv-primary">
+      <i class="fas fa-plus"></i> Novo Formulário
+    </button>
+  </div>
+
+  <div class="sv-card">
+    <div id="sv-loading" class="sv-loading">A carregar formulários…</div>
+    <div id="sv-empty" class="sv-empty" style="display:none;">
+      <i class="fas fa-clipboard-list"></i>
+      Ainda não criaste nenhum formulário.
+      <div style="margin-top:0.75rem;">
+        <button id="btnNovoFormularioEmpty" class="btn-sv-primary">
+          <i class="fas fa-plus" style="margin-top:0.75rem; font-size: 1.2rem;"></i> Criar o primeiro formulário
+        </button>
+      </div>
+    </div>
+    <div id="formsGrid" class="ag-theme-alpine" style="display:none;"></div>
+  </div>
+  <div class="modal fade" id="shareModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius:10px; border:1px solid var(--line);">
+        <div class="modal-header" style="border-bottom:1px solid var(--line);">
+          <h5 class="modal-title" id="shareModalTitle" style="font-weight:700; font-size:1.05rem;">Partilhar formulário</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+
+          <div id="shareNewLinkBox" style="display:none; background:var(--teal-light); border-radius:8px; padding:0.9rem; margin-bottom:1.1rem;">
+            <div style="font-size:0.82rem; font-weight:600; color:var(--teal); margin-bottom:0.4rem;">
+              <i class="fas fa-check-circle"></i> Link gerado — copia agora, não voltará a ser mostrado
+            </div>
+            <div style="display:flex; gap:0.5rem;">
+              <input type="text" id="shareNewLinkInput" readonly style="flex:1; border:1px solid var(--line); border-radius:6px; padding:0.4rem 0.6rem; font-size:0.85rem;">
+              <button class="btn-sv-primary" id="btnCopyShareLink" style="padding:0.4rem 0.8rem;"><i class="fas fa-copy"></i></button>
+            </div>
+          </div>
+
+          <form id="shareForm">
+            <label style="font-size:0.85rem; font-weight:600; margin-bottom:0.4rem; display:block;">Enviar para emails (opcional)</label>
+            <textarea id="shareEmail" rows="3" placeholder="Vários emails separados por vírgula ou linha. Vazio para um link geral." style="width:100%; border:1px solid var(--line); border-radius:6px; padding:0.5rem 0.7rem; font-size:0.9rem; margin-bottom:0.8rem; resize:vertical;"></textarea>
+
+            <div style="display:flex; gap:0.8rem;">
+              <div style="flex:1;">
+                <label style="font-size:0.85rem; font-weight:600; margin-bottom:0.4rem; display:block;">Limite de respostas</label>
+                <input type="number" id="shareMaxResponses" min="1" placeholder="Sem limite" style="width:100%; border:1px solid var(--line); border-radius:6px; padding:0.5rem 0.7rem; font-size:0.9rem;">
+              </div>
+              <div style="flex:1;">
+                <label style="font-size:0.85rem; font-weight:600; margin-bottom:0.4rem; display:block;">Expira em</label>
+                <input type="datetime-local" id="shareExpiresAt" style="width:100%; border:1px solid var(--line); border-radius:6px; padding:0.5rem 0.7rem; font-size:0.9rem;">
+              </div>
+            </div>
+
+            <button type="submit" class="btn-sv-primary" style="margin-top:1rem; width:100%; justify-content:center;">
+              <i class="fas fa-link"></i> Gerar link
+            </button>
+          </form>
+
+          <hr style="margin:1.2rem 0; border-color:var(--line);">
+
+          <div style="font-size:0.78rem; font-weight:700; color:var(--ink-faint); margin-bottom:0.6rem;">LINKS EXISTENTES</div>
+          <div id="shareLinksList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.0/dist/ag-grid-community.min.js"></script>
+<script nonce="{{ csp_nonce() }}">
+  const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+  document.addEventListener('DOMContentLoaded', function () {
+
+    const gridDiv = document.getElementById('formsGrid');
+    const loadingEl = document.getElementById('sv-loading');
+    const emptyEl = document.getElementById('sv-empty');
+    let shareFormId = null;
+    const shareModalEl = document.getElementById('shareModal');
+    const shareModal = new bootstrap.Modal(shareModalEl);
+
+    const STATUS_LABELS = { draft: 'Rascunho', published: 'Publicado', closed: 'Fechado' };
+
+    function statusBadgeHTML(status) {
+      const label = STATUS_LABELS[status] || status;
+      return `<span class="sv-badge ${status}"><span class="dot"></span>${label}</span>`;
+    }
+
+    const columnDefs = [
+      { field: 'nome', headerName: 'Nome', flex: 2, sort: 'asc' },
+      {
+        field: 'status', headerName: 'Estado', flex: 1,
+        cellRenderer: params => statusBadgeHTML(params.value)
+      },
+      { field: 'respostas', headerName: 'Respostas', flex: 1, maxWidth: 130 },
+      { field: 'data_criacao', headerName: 'Criado em', flex: 1 },
+      { field: 'ultima_atualizacao', headerName: 'Atualizado em', flex: 1 },
+      {
+        headerName: 'Ações',
+        flex: 1,
+        minWidth: 175,
+        sortable: false,
+        filter: false,
+        cellRenderer: function (params) {
+          return `
+            <button class="sv-grid-action" data-action="edit" data-id="${params.data.id}" title="Editar">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="sv-grid-action" data-action="share" data-id="${params.data.id}" data-nome="${params.data.nome}" title="Partilhar">
+              <i class="fas fa-share-alt"></i>
+            </button>
+            <button class="sv-grid-action" data-action="responses" data-id="${params.data.id}" title="Ver respostas">
+              <i class="fas fa-chart-bar"></i>
+            </button>
+            <button class="sv-grid-action danger" data-action="delete" data-id="${params.data.id}" data-nome="${params.data.nome}" title="Apagar">
+              <i class="fas fa-trash"></i>
+            </button>
+          `;
+        }
+      }
+    ];
+
+    const gridOptions = {
+      columnDefs: columnDefs,
+      rowData: [],
+      defaultColDef: { sortable: true, filter: true, resizable: true },
+      domLayout: 'normal',
+      onCellClicked: function (params) {
+        if (params.colDef.headerName !== 'Ações') return;
+        const btn = params.event.target.closest('button');
+        if (!btn) return;
+
+        const id = btn.dataset.id;
+        if (btn.dataset.action === 'edit') {
+          window.location.href = `/surveys/${id}/update`;
+        } else if (btn.dataset.action === 'delete') {
+          confirmDelete(id, btn.dataset.nome);
+        } else if (btn.dataset.action === 'share') {
+          openShareModal(id, btn.dataset.nome);
+        } else if (btn.dataset.action === 'responses') {
+          window.location.href = `/surveys/${id}/responses`;
+        }
+      }
+    };
+
+    const gridApi = agGrid.createGrid(gridDiv, gridOptions);
+
+    function confirmDelete(id, nome) {
+      Swal.fire({
+        title: 'Apagar formulário?',
+        text: `"${nome}" vai ser apagado permanentemente. Esta ação não pode ser revertida.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Apagar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#D14343',
+      }).then(function (result) {
+        if (result.isConfirmed) {
+          deleteForm(id);
+        }
+      });
+    }
+
+    function deleteForm(id) {
+      fetch(`/api/surveys/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': csrfToken }
+      })
+        .then(async response => {
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Não foi possível apagar o formulário.');
+          }
+          window.showToast('Formulário apagado.', 'success');
+          loadForms();
+        })
+        .catch(err => window.showToast(err.message, 'error'));
+    }
+
+    function loadForms() {
+      loadingEl.style.display = 'block';
+      emptyEl.style.display = 'none';
+      gridDiv.style.display = 'none';
+
+      fetch('/api/surveys')
+        .then(async response => {
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(data.message || 'Não foi possível carregar os formulários.');
+          }
+          return data;
+        })
+        .then(forms => {
+          loadingEl.style.display = 'none';
+          if (!forms || forms.length === 0) {
+            emptyEl.style.display = 'block';
+            return;
+          }
+          gridDiv.style.display = 'block';
+          gridApi.setGridOption('rowData', forms);
+        })
+        .catch(err => {
+          loadingEl.style.display = 'none';
+          window.showToast(err.message, 'error');
+        });
+    }
+    function openShareModal(formId, nome) {
+      shareFormId = formId;
+      document.getElementById('shareModalTitle').textContent = `Partilhar "${nome}"`;
+      document.getElementById('shareNewLinkBox').style.display = 'none';
+      document.getElementById('shareForm').reset();
+      loadShareLinks();
+      shareModal.show();
+    }
+
+    function loadShareLinks() {
+      const listEl = document.getElementById('shareLinksList');
+      listEl.innerHTML = '<div style="color:var(--ink-faint); font-size:0.85rem;">A carregar…</div>';
+
+      fetch(`/api/surveys/${shareFormId}/share-links`)
+        .then(async r => {
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(data.message || 'Erro ao carregar links.');
+          return data;
+        })
+        .then(links => {
+          if (links.length === 0) {
+            listEl.innerHTML = '<div style="color:var(--ink-faint); font-size:0.85rem;">Ainda não há links gerados.</div>';
+            return;
+          }
+          listEl.innerHTML = links.map(renderShareLinkRow).join('');
+        })
+        .catch(err => {
+          listEl.innerHTML = `<div style="color:var(--danger); font-size:0.85rem;">${err.message}</div>`;
+        });
+    }
+
+    function renderShareLinkRow(link) {
+      const target = link.invited_email ? link.invited_email : 'Link geral';
+      const statusText = link.is_active ? 'Ativo' : 'Revogado';
+      const statusColor = link.is_active ? 'var(--teal)' : 'var(--ink-faint)';
+      const usage = link.max_responses ? `${link.response_count}/${link.max_responses} respostas` : `${link.response_count} respostas`;
+
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0; border-bottom:1px solid var(--line); font-size:0.85rem;">
+          <div>
+            <div style="font-weight:600;">${target}</div>
+            <div style="color:var(--ink-faint); font-size:0.78rem;">${usage} · criado em ${link.created_at}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.6rem;">
+            <span style="color:${statusColor}; font-weight:600; font-size:0.78rem;">${statusText}</span>
+            ${link.is_active ? `<button class="sv-grid-action danger" data-revoke-link="${link.id}" title="Revogar"><i class="fas fa-ban"></i></button>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    document.getElementById('shareLinksList').addEventListener('click', function (e) {
+      const btn = e.target.closest('[data-revoke-link]');
+      if (!btn) return;
+      const linkId = btn.dataset.revokeLink;
+
+      fetch(`/api/surveys/share-links/${linkId}/revoke`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken }
+      })
+        .then(async r => {
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok || !data.success) throw new Error(data.message || 'Erro ao revogar link.');
+          window.showToast('Link revogado.', 'success');
+          loadShareLinks();
+        })
+        .catch(err => window.showToast(err.message, 'error'));
+    });
+
+    document.getElementById('shareForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const payload = {
+        invited_emails: document.getElementById('shareEmail').value.trim() || null,
+        max_responses: document.getElementById('shareMaxResponses').value || null,
+        expires_at: document.getElementById('shareExpiresAt').value || null,
+      };
+
+      fetch(`/api/surveys/${shareFormId}/share-links`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify(payload)
+      })
+        .then(async r => {
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok || !data.success) throw new Error(data.message || 'Erro ao gerar link.');
+          return data;
+        })
+        .then(data => {
+          if (data.share_url) {
+            document.getElementById('shareNewLinkInput').value = data.share_url;
+            document.getElementById('shareNewLinkBox').style.display = 'block';
+          }
+          document.getElementById('shareForm').reset();
+          loadShareLinks();
+          window.showToast(data.message || 'Link criado.', 'success');
+        })
+        .catch(err => window.showToast(err.message, 'error'));
+    });
+
+    document.getElementById('btnCopyShareLink').addEventListener('click', function () {
+      const input = document.getElementById('shareNewLinkInput');
+      input.select();
+      navigator.clipboard.writeText(input.value).then(() => {
+        window.showToast('Link copiado.', 'success');
+      });
+    });
+
+    document.getElementById('btnNovoFormulario').addEventListener('click', function () {
+      window.location.href = '/surveys/new';
+    });
+    document.getElementById('btnNovoFormularioEmpty').addEventListener('click', function () {
+      window.location.href = '/surveys/new';
+    });
+
+    loadForms();
+  });
+</script>
+{% endblock %}

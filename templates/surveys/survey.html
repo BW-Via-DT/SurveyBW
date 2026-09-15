@@ -1,0 +1,737 @@
+{% extends 'base.html' %}
+
+{% block title %}Criar Formulário{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --teal: #0D9488;
+    --teal-light: #E6FBF8;
+    --mint: #2EFAD9;
+    --ink: #101828;
+    --ink-soft: #475467;
+    --ink-faint: #98A2B3;
+    --line: #E4E7EC;
+    --bg: #F7F8FA;
+    --danger: #D14343;
+    --danger-light: #FBEAEA;
+    --radius: 10px;
+  }
+
+  #fb-page {
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    margin: -1.5rem -1.5rem 0;
+    padding: 1.5rem;
+    min-height: calc(100vh - 60px);
+  }
+
+  /* ---------- Top bar ---------- */
+  .fb-header {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .fb-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .fb-title-input {
+    font-size: 1.5rem;
+    font-weight: 700;
+    border: none;
+    width: 100%;
+    background: transparent;
+    padding: 0.15rem 0;
+    color: var(--ink);
+  }
+  .fb-title-input:focus {
+    outline: none;
+    box-shadow: none;
+  }
+  .fb-desc-input {
+    border: none;
+    background: transparent;
+    width: 100%;
+    resize: none;
+    color: var(--ink-soft);
+    font-size: 0.925rem;
+    margin-top: 0.25rem;
+    line-height: 1.5;
+  }
+  .fb-desc-input:focus { outline: none; }
+  .fb-desc-input::placeholder, .fb-title-input::placeholder { color: var(--ink-faint); }
+
+  .fb-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: #F2F4F7;
+    border-radius: 999px;
+    padding: 0.3rem 0.7rem;
+    white-space: nowrap;
+  }
+  .fb-status .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--ink-faint);
+  }
+
+  .fb-actions { display: flex; gap: 0.6rem; margin-top: 1rem; justify-content: flex-end; }
+
+  .btn-fb {
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .btn-fb:hover { border-color: var(--ink-faint); }
+  .btn-fb-primary {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: #fff;
+  }
+  .btn-fb-primary:hover { background: #0B7E75; border-color: #0B7E75; }
+
+  /* ---------- Layout ---------- */
+  .fb-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  /* ---------- Question cards ---------- */
+  .fb-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--teal);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 0.9rem;
+  }
+  .fb-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+  }
+  .fb-card-num {
+    font-weight: 700;
+    color: var(--teal);
+    font-size: 0.9rem;
+    min-width: 1.2rem;
+  }
+  .fb-type-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: #F2F4F7;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+  }
+  .fb-card-move { display: flex; gap: 0.15rem; margin-left: auto; }
+  .fb-icon-btn {
+    border: none;
+    background: transparent;
+    color: var(--ink-faint);
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fb-icon-btn:hover { background: #F2F4F7; color: var(--ink-soft); }
+  .fb-icon-btn.danger:hover { background: var(--danger-light); color: var(--danger); }
+
+  .fb-label-input {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    padding: 0.35rem 0;
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    background: transparent;
+  }
+  .fb-label-input:focus { outline: none; border-color: var(--teal); }
+
+  .fb-help-input {
+    width: 100%;
+    border: none;
+    padding: 0.15rem 0;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    background: transparent;
+    margin-bottom: 0.6rem;
+  }
+  .fb-help-input:focus { outline: none; }
+
+  .fb-options { margin-bottom: 0.5rem; }
+  .fb-option-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+  .fb-option-row .marker {
+    width: 14px; height: 14px;
+    border: 1.5px solid var(--ink-faint);
+    flex-shrink: 0;
+  }
+  .fb-option-row .marker.round { border-radius: 50%; }
+  .fb-option-row .marker.square { border-radius: 3px; }
+  .fb-option-input {
+    flex: 1;
+    border: none;
+    border-bottom: 1px solid transparent;
+    padding: 0.2rem 0;
+    font-size: 0.9rem;
+    background: transparent;
+  }
+  .fb-option-input:focus { outline: none; border-color: var(--line); }
+  .fb-add-option {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.2rem 0;
+  }
+  .fb-add-option:hover { color: var(--teal); }
+
+  .fb-card-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--line);
+  }
+  .fb-toggle-label {
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .fb-switch {
+    width: 32px; height: 18px;
+    border-radius: 999px;
+    background: var(--line);
+    position: relative;
+    transition: background 0.15s ease;
+    flex-shrink: 0;
+  }
+  .fb-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.15s ease;
+  }
+  .fb-switch.on { background: var(--teal); }
+  .fb-switch.on::after { transform: translateX(14px); }
+
+  /* ---------- Add field ---------- */
+  .fb-add-card {
+    border: 1.5px dashed var(--line);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--ink-soft);
+    width: 100%;
+    padding: 0.9rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .fb-add-card:hover { border-color: var(--teal); color: var(--teal); }
+
+  /* ---------- Type palette (popover) ---------- */
+  .fb-palette {
+    position: relative;
+  }
+  .fb-palette-menu {
+    display: none;
+    position: absolute;
+    left: 0; right: 0;
+    top: calc(100% + 6px);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(16,24,40,0.08);
+    padding: 0.4rem;
+    z-index: 20;
+  }
+  .fb-palette-menu.open { display: block; }
+  .fb-palette-item {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.87rem;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .fb-palette-item:hover { background: var(--teal-light); }
+  .fb-palette-item i { width: 16px; color: var(--teal); }
+
+  /* ---------- Settings panel ---------- */
+  .fb-panel {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .fb-panel h6 {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ink-faint);
+    letter-spacing: 0.02em;
+    margin-bottom: 0.9rem;
+  }
+  .fb-setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.9rem;
+  }
+  .fb-setting-row:last-child { margin-bottom: 0; }
+  .fb-setting-label { font-size: 0.87rem; color: var(--ink); }
+  .fb-setting-sub { font-size: 0.76rem; color: var(--ink-faint); margin-top: 0.1rem; }
+  .fb-date-input {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+    width: 100%;
+    margin-top: 0.4rem;
+  }
+
+  .fb-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--ink-faint);
+    font-size: 0.9rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="fb-page">
+
+  <div class="fb-header">
+    <div class="fb-header-top">
+      <div style="flex:1;">
+        <input type="text" id="fbTitle" class="fb-title-input" placeholder="Título do formulário" value="Formulário sem título">
+        <textarea id="fbDesc" class="fb-desc-input" rows="1" placeholder="Adicionar uma descrição (opcional)"></textarea>
+      </div>
+      <span class="fb-status"><span class="dot"></span> Rascunho</span>
+    </div>
+    <div class="fb-actions">
+      <button class="btn-fb" id="btnPreview">Pré-visualizar</button>
+      <button class="btn-fb" id="btnSaveDraft">Guardar rascunho</button>
+      <button class="btn-fb btn-fb-primary" id="btnPublish">Publicar</button>
+    </div>
+  </div>
+
+  <div class="fb-layout">
+    <div>
+      <div id="fbCanvas"></div>
+
+      <div class="fb-palette">
+        <button class="fb-add-card" id="btnAddField">+ Adicionar pergunta</button>
+        <div class="fb-palette-menu" id="paletteMenu">
+            <div class="fb-palette-item" data-type="text"><i class="fas fa-minus"></i> Texto curto</div>
+            <div class="fb-palette-item" data-type="textarea"><i class="fas fa-align-left"></i> Texto longo</div>
+            <div class="fb-palette-item" data-type="number"><i class="fas fa-hashtag"></i> Número</div>
+            <div class="fb-palette-item" data-type="date"><i class="fas fa-calendar"></i> Data</div>
+            <div class="fb-palette-item" data-type="email"><i class="fas fa-envelope"></i> Email</div>
+            <div class="fb-palette-item" data-type="single_choice"><i class="far fa-dot-circle"></i> Escolha única</div>
+            <div class="fb-palette-item" data-type="multiple_choice"><i class="far fa-check-square"></i> Escolha múltipla</div>
+            <div class="fb-palette-item" data-type="dropdown"><i class="far fa-caret-square-down"></i> Lista pendente</div>
+            <div class="fb-palette-item" data-type="rating"><i class="far fa-star"></i> Classificação</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ csp_nonce() }}">
+    const FORM_ID = {{ form_id | tojson }};  
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+    document.addEventListener('DOMContentLoaded', function () {
+
+    let fields = [];
+    let nextId = 1;
+
+    const canvas = document.getElementById('fbCanvas');
+    const paletteMenu = document.getElementById('paletteMenu');
+    const titleInput = document.getElementById('fbTitle');
+    const desc = document.getElementById('fbDesc');
+
+    function applyStatusBadge(status) {
+      const statusBadge = document.querySelector('.fb-status');
+      const statusTextMap = {
+        draft: 'Rascunho',
+        published: 'Publicado',
+        closed: 'Fechado'
+      };
+
+      if (!statusBadge) return;
+      const label = statusTextMap[status] || 'Rascunho';
+      statusBadge.innerHTML = '<span class="dot"></span> ' + label;
+    }
+
+    function hydrateForm(form) {
+      if (!form) return;
+
+      titleInput.value = form.title || 'Formulário sem título';
+      desc.value = form.description || '';
+      desc.style.height = 'auto';
+      desc.style.height = desc.scrollHeight + 'px';
+
+      applyStatusBadge(form.status || 'draft');
+
+      fields = (form.fields || []).map((field) => ({
+        id: field.id || nextId++,
+        type: field.type,
+        label: field.label || '',
+        helpText: field.help_text || '',
+        required: !!field.required,
+        options: (field.options || []).map((opt) => ({
+          id: opt.id || nextId++,
+          label: opt.label || ''
+        }))
+      }));
+
+      const maxId = fields.reduce((max, field) => {
+        const ids = [field.id, ...field.options.map(opt => opt.id)];
+        return Math.max(max, ...ids);
+      }, 0);
+      nextId = maxId + 1;
+
+      render();
+    }
+
+    function loadFormForEdit() {
+      if (!FORM_ID) return;
+
+      fetch(`/api/surveys/${FORM_ID}`)
+        .then(async response => {
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(data.message || 'Não foi possível carregar o formulário.');
+          }
+          return data;
+        })
+        .then(form => hydrateForm(form))
+        .catch(err => {
+          window.showToast(err.message, 'error');
+        });
+    }
+
+    const TYPE_LABELS = {
+        text: 'Texto curto', textarea: 'Texto longo', number: 'Número', date: 'Data',
+        email: 'Email', single_choice: 'Escolha única', multiple_choice: 'Escolha múltipla',
+        dropdown: 'Lista pendente', rating: 'Classificação'
+    };
+    const CHOICE_TYPES = ['single_choice', 'multiple_choice', 'dropdown'];
+
+    function addField(type) {
+        fields.push({
+        id: nextId++,
+        type: type,
+        label: '',
+        helpText: '',
+        required: false,
+        options: CHOICE_TYPES.includes(type) ? [{ id: nextId++, label: '' }, { id: nextId++, label: '' }] : []
+        });
+        paletteMenu.classList.remove('open');
+        render();
+    }
+
+    function removeField(id) {
+        fields = fields.filter(f => f.id !== id);
+        render();
+    }
+
+    function moveField(id, dir) {
+        const i = fields.findIndex(f => f.id === id);
+        const j = i + dir;
+        if (j < 0 || j >= fields.length) return;
+        [fields[i], fields[j]] = [fields[j], fields[i]];
+        render();
+    }
+
+    function fieldCardHTML(field, index) {
+        const marker = field.type === 'multiple_choice' ? 'square' : 'round';
+        const optionsHTML = CHOICE_TYPES.includes(field.type) ? `
+        <div class="fb-options" data-options-for="${field.id}">
+            ${field.options.map(opt => `
+            <div class="fb-option-row" data-option-id="${opt.id}">
+                <span class="marker ${marker}"></span>
+                <input type="text" class="fb-option-input" placeholder="Opção" value="${opt.label}" data-option-input="${opt.id}">
+                <button class="fb-icon-btn danger" data-remove-option="${opt.id}"><i class="fa fa-times"></i></button>
+            </div>
+            `).join('')}
+            <button class="fb-add-option" data-add-option="${field.id}">+ Adicionar opção</button>
+        </div>
+        ` : '';
+
+        return `
+        <div class="fb-card" data-field-id="${field.id}">
+            <div class="fb-card-head">
+            <span class="fb-card-num">${index + 1}</span>
+            <span class="fb-type-badge">${TYPE_LABELS[field.type]}</span>
+            <div class="fb-card-move">
+                <button class="fb-icon-btn" data-move-up="${field.id}"><i class="fa fa-chevron-up"></i></button>
+                <button class="fb-icon-btn" data-move-down="${field.id}"><i class="fa fa-chevron-down"></i></button>
+                <button class="fb-icon-btn danger" data-remove-field="${field.id}"><i class="fa fa-trash"></i></button>
+            </div>
+            </div>
+            <input type="text" class="fb-label-input" placeholder="Escreva a pergunta" value="${field.label}" data-label-input="${field.id}">
+            <input type="text" class="fb-help-input" placeholder="Texto de ajuda (opcional)" value="${field.helpText}" data-help-input="${field.id}">
+            ${optionsHTML}
+            <div class="fb-card-footer">
+            <label class="fb-toggle-label">
+                <div class="fb-switch ${field.required ? 'on' : ''}" data-required="${field.id}"></div>
+                Obrigatória
+            </label>
+            </div>
+        </div>
+        `;
+    }
+
+    function render() {
+        if (fields.length === 0) {
+        canvas.innerHTML = '<div class="fb-empty">Ainda não há perguntas. Adicione a primeira abaixo.</div>';
+        return;
+        }
+        canvas.innerHTML = fields.map((f, i) => fieldCardHTML(f, i)).join('');
+    }
+
+    // --- Event delegation ---
+    document.getElementById('btnAddField').addEventListener('click', function (e) {
+        e.stopPropagation();
+        paletteMenu.classList.toggle('open');
+    });
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.fb-palette')) paletteMenu.classList.remove('open');
+    });
+    paletteMenu.addEventListener('click', function (e) {
+        const item = e.target.closest('.fb-palette-item');
+        if (item) addField(item.dataset.type);
+    });
+
+    canvas.addEventListener('click', function (e) {
+        const t = e.target;
+        if (t.closest('[data-remove-field]')) removeField(Number(t.closest('[data-remove-field]').dataset.removeField));
+        else if (t.closest('[data-move-up]')) moveField(Number(t.closest('[data-move-up]').dataset.moveUp), -1);
+        else if (t.closest('[data-move-down]')) moveField(Number(t.closest('[data-move-down]').dataset.moveDown), 1);
+        else if (t.closest('[data-required]')) {
+        const id = Number(t.closest('[data-required]').dataset.required);
+        const f = fields.find(f => f.id === id);
+        f.required = !f.required;
+        render();
+        } else if (t.closest('[data-add-option]')) {
+        const id = Number(t.closest('[data-add-option]').dataset.addOption);
+        const f = fields.find(f => f.id === id);
+        f.options.push({ id: nextId++, label: '' });
+        render();
+        } else if (t.closest('[data-remove-option]')) {
+        const optId = Number(t.closest('[data-remove-option]').dataset.removeOption);
+        const f = fields.find(f => f.options.some(o => o.id === optId));
+        f.options = f.options.filter(o => o.id !== optId);
+        render();
+        }
+    });
+
+    canvas.addEventListener('input', function (e) {
+        const t = e.target;
+        if (t.dataset.labelInput) fields.find(f => f.id === Number(t.dataset.labelInput)).label = t.value;
+        else if (t.dataset.helpInput) fields.find(f => f.id === Number(t.dataset.helpInput)).helpText = t.value;
+        else if (t.dataset.optionInput) {
+        const optId = Number(t.dataset.optionInput);
+        const f = fields.find(f => f.options.some(o => o.id === optId));
+        f.options.find(o => o.id === optId).label = t.value;
+        }
+    });
+
+    // Auto-grow description
+    desc.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    });
+
+    // --- Actions (ligar ao backend Flask depois) ---
+    function buildPayload(status) {
+        return {
+        title: document.getElementById('fbTitle').value,
+        description: desc.value,
+        status: status,
+        fields: fields.map((f, i) => ({
+            order: i,
+            type: f.type,
+            label: f.label,
+            help_text: f.helpText,
+            required: f.required,
+            options: f.options.map((o, j) => ({ order: j, label: o.label }))
+        }))
+        };
+    }
+
+    function setButtonsDisabled(disabled) {
+        document.getElementById('btnSaveDraft').disabled = disabled;
+        document.getElementById('btnPublish').disabled = disabled;
+        document.getElementById('btnPreview').disabled = disabled;
+    }
+
+    function saveSurvey(status) {
+        const payload = buildPayload(status);
+
+        if (!payload.title.trim()) {
+        window.showToast('O título do formulário é obrigatório.', 'warning');
+        return;
+        }
+        if (payload.fields.length === 0) {
+        window.showToast('Adicione pelo menos uma pergunta.', 'warning');
+        return;
+        }
+
+        const url = FORM_ID ? `/api/surveys/${FORM_ID}` : '/api/surveys';
+        const method = FORM_ID ? 'PUT' : 'POST';
+
+        setButtonsDisabled(true);
+
+        fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify(payload)
+        })
+        .then(async response => {
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Ocorreu um erro ao guardar o formulário.');
+            }
+            return data;
+        })
+        .then(data => {
+            const message = status === 'published' ? 'Formulário publicado.' : 'Rascunho guardado.';
+            window.showToast(message, 'success');
+            window.location.href = '/surveys';
+        })
+        .catch(err => {
+            window.showToast(err.message, 'error');
+        })
+        .finally(() => {
+            setButtonsDisabled(false);
+        });
+    }
+
+    document.getElementById('btnSaveDraft').addEventListener('click', function () {
+        saveSurvey('draft');
+    });
+
+    document.getElementById('btnPublish').addEventListener('click', function () {
+        saveSurvey('published');
+    });
+
+    document.getElementById('btnPreview').addEventListener('click', function () {
+      const payload = buildPayload('draft');
+      const modalEl = document.getElementById('surveyPreviewModal');
+      const titleEl = document.getElementById('surveyPreviewModalLabel');
+      const descriptionEl = document.getElementById('previewFormDescription');
+      const fieldsEl = document.getElementById('previewFormFields');
+
+      titleEl.textContent = payload.title || 'Formulário sem título';
+      descriptionEl.textContent = payload.description || 'Sem descrição.';
+
+      if (!payload.fields || payload.fields.length === 0) {
+        fieldsEl.innerHTML = '<div class="preview-empty">Ainda não há perguntas para pré-visualizar.</div>';
+      } else {
+        fieldsEl.innerHTML = payload.fields.map((field, index) => {
+          const optionsHtml = (field.options || []).length
+            ? `<div class="preview-option-list">${(field.options || []).map(opt => `
+                <label class="preview-option">
+                  <input type="${field.type === 'multiple_choice' ? 'checkbox' : 'radio'}" disabled name="preview_${field.id}">
+                  <span>${(opt.label || 'Opção sem texto').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+                </label>
+              `).join('')}</div>`
+            : '';
+
+          let inputHtml = '<input class="preview-input" type="text" value="" disabled />';
+          if (field.type === 'textarea') {
+            inputHtml = '<textarea class="preview-textarea" disabled></textarea>';
+          } else if (field.type === 'number') {
+            inputHtml = '<input class="preview-input" type="number" value="" disabled />';
+          } else if (field.type === 'date') {
+            inputHtml = '<input class="preview-input" type="date" value="" disabled />';
+          } else if (field.type === 'email') {
+            inputHtml = '<input class="preview-input" type="email" value="" disabled />';
+          } else if (field.type === 'dropdown') {
+            inputHtml = `<select class="preview-select" disabled><option>Selecione uma opção</option>${(field.options || []).map(opt => `<option>${(opt.label || 'Opção sem texto').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`).join('')}</select>`;
+          }
+
+          return `
+            <div class="preview-question">
+              <div class="preview-question-head">
+                <span class="num">${index + 1}</span>
+                <span>${(field.label || 'Pergunta sem título').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+                ${field.required ? '<span class="required">*</span>' : ''}
+              </div>
+              ${field.help_text ? `<div class="preview-question-help">${(field.help_text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+              ${field.type === 'single_choice' || field.type === 'multiple_choice' || field.type === 'dropdown'
+                  ? optionsHtml
+                  : inputHtml}
+            </div>
+          `;
+        }).join('');
+      }
+
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      modal.show();
+    });
+
+    if (FORM_ID) {
+      loadFormForEdit();
+    } else {
+      render();
+    }
+    });
+</script>
+{% endblock %}

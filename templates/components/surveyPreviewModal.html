@@ -1,0 +1,149 @@
+<div class="modal fade" id="surveyPreviewModal" tabindex="-1" aria-labelledby="surveyPreviewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content preview-modal-content">
+      <div class="modal-header preview-modal-header">
+        <div>
+          <div class="preview-modal-kicker">Pré-visualização</div>
+          <h5 class="modal-title preview-modal-title" id="surveyPreviewModalLabel">Formulário</h5>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body preview-modal-body">
+        <p id="previewFormDescription" class="preview-form-description"></p>
+        <div id="previewFormFields" class="preview-form-fields"></div>
+      </div>
+
+      <div class="modal-footer preview-modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .preview-modal-content {
+    border: 1px solid #E4E7EC;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .preview-modal-header {
+    background: linear-gradient(135deg, #0D9488 0%, #0B7E75 100%);
+    color: #fff;
+    padding: 1rem 1.25rem;
+    border-bottom: none;
+  }
+
+  .preview-modal-kicker {
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.8;
+    margin-bottom: 0.2rem;
+  }
+
+  .preview-modal-title {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .preview-modal-body {
+    padding: 1.5rem;
+    background: #F9FAFB;
+  }
+
+  .preview-form-description {
+    color: #475467;
+    margin-bottom: 1.1rem;
+    white-space: pre-wrap;
+  }
+
+  .preview-form-fields {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .preview-question {
+    background: #fff;
+    border: 1px solid #E4E7EC;
+    border-left: 4px solid #0D9488;
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+  }
+
+  .preview-question-head {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+    font-weight: 600;
+    color: #101828;
+  }
+
+  .preview-question-head .num {
+    color: #0D9488;
+    font-weight: 700;
+  }
+
+  .preview-question-head .required {
+    color: #D14343;
+  }
+
+  .preview-question-help {
+    color: #667085;
+    font-size: 0.82rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .preview-input,
+  .preview-select,
+  .preview-textarea {
+    width: 100%;
+    border: 1px solid #D0D5DD;
+    border-radius: 8px;
+    padding: 0.7rem 0.8rem;
+    background: #fff;
+    color: #101828;
+  }
+
+  .preview-textarea {
+    min-height: 90px;
+    resize: vertical;
+  }
+
+  .preview-option-list {
+    display: grid;
+    gap: 0.55rem;
+    margin-top: 0.5rem;
+  }
+
+  .preview-option {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: #1D2939;
+    font-size: 0.95rem;
+  }
+
+  .preview-option input {
+    margin: 0;
+  }
+
+  .preview-empty {
+    text-align: center;
+    color: #98A2B3;
+    padding: 2rem 1rem;
+    background: #fff;
+    border: 1px dashed #D0D5DD;
+    border-radius: 12px;
+  }
+
+  .preview-modal-footer {
+    background: #fff;
+    border-top: 1px solid #E4E7EC;
+    padding: 0.9rem 1.25rem;
+  }
+</style>

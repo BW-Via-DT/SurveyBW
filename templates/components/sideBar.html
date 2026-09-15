@@ -1,0 +1,21 @@
+<div class="sidebar" id="sidebar">
+  <a href="#" class="sidebar-brand">
+    <div class="sidebar-brand-icon">
+      <img
+        src="{{ url_for('static', filename='content/logo.png') }}"
+        alt="SurveyBW"
+        style="height: 40px; margin-right: 10px"
+      />
+    </div>
+    <div class="sidebar-brand-text">SurveyBW</div>
+  </a>
+  <hr class="sidebar-divider" />
+  {% if custom_sidebar %} {% include custom_sidebar %} {% elif sidebar_links %}
+  {% include sidebar_links %} {% else %} {% include
+  'base_test/sidebar_links.html' %} {% endif %}
+  <div class="text-center d-none d-md-inline">
+    <button class="sidebar-toggle rounded-circle border-0" id="sidebarToggle">
+      <i class="fas fa-arrow-left"></i>
+    </button>
+  </div>
+</div>
