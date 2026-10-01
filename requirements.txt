@@ -12,3 +12,4 @@ flask-talisman
 python-dotenv
 pyotp 
 qrcode[pil]
+gunicorn
