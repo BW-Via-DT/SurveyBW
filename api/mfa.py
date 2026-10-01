@@ -10,7 +10,8 @@ from argon2.exceptions import InvalidHash, VerifyMismatchError
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
 
 from extensions import limiter
-from .auth import ph, connect, log_login, _set_session, _login_fail
+from utils.call_conn import connect
+from .auth import ph, log_login, _set_session, _login_fail
 
 mfa_api = Blueprint("mfa", __name__)
 logger = logging.getLogger("mfa")
@@ -55,8 +56,8 @@ def mfa_verify():
     cursor = conn.cursor()
     cursor.execute("""
         SELECT OperatorNumber, Name, isAdmin, MFASecret
-        FROM [SurveyBW].[dbo].[Users]
-        WHERE Id = ?
+        FROM public.Users
+        WHERE Id = %s
     """, (pending_id,))
     row = cursor.fetchone()
     cursor.close()
@@ -107,6 +108,7 @@ def mfa_enroll():
 
     return render_template('mfa_enroll.html')
 
+
 # ---------------------------------------------------------------------------
 # Enrolamento / gestão do MFA (utilizador já autenticado)
 # ---------------------------------------------------------------------------
@@ -132,8 +134,8 @@ def mfa_setup():
     cursor = conn.cursor()
     cursor.execute("""
         SELECT OperatorNumber
-        FROM [SurveyBW].[dbo].[Users]
-        WHERE Id = ?
+        FROM public.Users
+        WHERE Id = %s
     """, (user_id,))
     row = cursor.fetchone()
     cursor.close()
@@ -202,18 +204,18 @@ def mfa_enable():
     cursor = conn.cursor()
 
     cursor.execute("""
-        UPDATE [SurveyBW].[dbo].[Users]
-        SET MFASecret = ?,
-            MFAEnabled = 1
-        WHERE Id = ?
+        UPDATE public.Users
+        SET MFASecret = %s,
+            MFAEnabled = TRUE
+        WHERE Id = %s
     """, (setup_secret, user_id))
 
     conn.commit()
 
     cursor.execute("""
         SELECT OperatorNumber, Name, isAdmin
-        FROM [SurveyBW].[dbo].[Users]
-        WHERE Id = ?
+        FROM public.Users
+        WHERE Id = %s
     """, (user_id,))
     user_row = cursor.fetchone()
 
@@ -264,7 +266,7 @@ def mfa_disable():
 
     conn = connect()
     cursor = conn.cursor()
-    cursor.execute("SELECT PasswordHash FROM [SurveyBW].[dbo].[Users] WHERE Id = ?", (local_user_id,))
+    cursor.execute("SELECT PasswordHash FROM public.Users WHERE Id = %s", (local_user_id,))
     row = cursor.fetchone()
 
     if not row:
@@ -280,11 +282,11 @@ def mfa_disable():
         return jsonify({'success': False, 'message': 'Incorrect password.'}), 401
 
     cursor.execute("""
-        UPDATE [SurveyBW].[dbo].[Users]
-        SET MFAEnabled = 0, MFASecret = NULL
-        WHERE Id = ?
+        UPDATE public.Users
+        SET MFAEnabled = FALSE, MFASecret = NULL
+        WHERE Id = %s
     """, (local_user_id,))
-    cursor.execute("DELETE FROM [SurveyBW].[dbo].[MFABackupCodes] WHERE UserId = ?", (local_user_id,))
+    cursor.execute("DELETE FROM public.MFABackupCodes WHERE UserId = %s", (local_user_id,))
     conn.commit()
     cursor.close()
     conn.close()
@@ -306,7 +308,7 @@ def mfa_regenerate_backup_codes():
 
     conn = connect()
     cursor = conn.cursor()
-    cursor.execute("SELECT PasswordHash, MFAEnabled FROM [SurveyBW].[dbo].[Users] WHERE Id = ?", (local_user_id,))
+    cursor.execute("SELECT PasswordHash, MFAEnabled FROM public.Users WHERE Id = %s", (local_user_id,))
     row = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -337,15 +339,15 @@ def _generate_backup_codes(local_user_id, count=BACKUP_CODES_COUNT):
     (só nesta chamada -> nunca mais serão visíveis em texto simples)."""
     conn = connect()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM [SurveyBW].[dbo].[MFABackupCodes] WHERE UserId = ?", (local_user_id,))
+    cursor.execute("DELETE FROM public.MFABackupCodes WHERE UserId = %s", (local_user_id,))
 
     plain_codes = []
     for _ in range(count):
         code = f"{secrets.token_hex(2)}-{secrets.token_hex(2)}"  # ex: a1b2-c3d4
         plain_codes.append(code)
         cursor.execute("""
-            INSERT INTO [SurveyBW].[dbo].[MFABackupCodes] (UserId, CodeHash, CreatedAt)
-            VALUES (?, ?, ?)
+            INSERT INTO public.MFABackupCodes (UserId, CodeHash, CreatedAt)
+            VALUES (%s, %s, %s)
         """, (local_user_id, ph.hash(code), datetime.utcnow()))
 
     conn.commit()
@@ -361,8 +363,8 @@ def _try_backup_code(local_user_id, code):
     cursor = conn.cursor()
     cursor.execute("""
         SELECT Id, CodeHash
-        FROM [SurveyBW].[dbo].[MFABackupCodes]
-        WHERE UserId = ? AND UsedAt IS NULL
+        FROM public.MFABackupCodes
+        WHERE UserId = %s AND UsedAt IS NULL
     """, (local_user_id,))
     rows = cursor.fetchall()
 
@@ -377,15 +379,16 @@ def _try_backup_code(local_user_id, code):
 
     if matched_id:
         cursor.execute("""
-            UPDATE [SurveyBW].[dbo].[MFABackupCodes]
-            SET UsedAt = ?
-            WHERE Id = ?
+            UPDATE public.MFABackupCodes
+            SET UsedAt = %s
+            WHERE Id = %s
         """, (datetime.utcnow(), matched_id))
         conn.commit()
 
     cursor.close()
     conn.close()
     return matched_id is not None
+
 
 def _get_mfa_enroll_user_id():
     enroll_id = session.get('mfa_enroll_user_id')

@@ -1,19 +1,15 @@
+import hashlib
 import json
 import logging
+import secrets
 from datetime import datetime
 from functools import wraps
 
-import pyodbc
 from flask import (Blueprint, current_app, jsonify, redirect, render_template,
                     request, session, url_for)
-from markupsafe import escape
 
 from extensions import limiter
-from utils.call_conn import get_db_connection
-
-import hashlib
-import secrets
-
+from utils.call_conn import connect
 from utils.email_template import build_share_link_email
 
 surveys_api = Blueprint("surveys", __name__)
@@ -36,10 +32,6 @@ MAX_OPTIONS_PER_FIELD = 50
 MAX_SHARE_RESPONSES = 100000
 
 
-def connect():
-    return pyodbc.connect(get_db_connection())
-
-
 def _client_ip():
     ip_address = request.headers.get('X-Forwarded-For', request.remote_addr or '')
     return ip_address.split(',')[0].strip()
@@ -56,6 +48,7 @@ def login_required(view):
             return redirect(url_for('index'))
         return view(*args, **kwargs)
     return wrapped
+
 
 # ============================================================
 # VALIDAÇÃO
@@ -121,10 +114,10 @@ def _validate_form_payload(data, require_fields=True):
 def _insert_fields(cursor, form_id, fields):
     for order, field in enumerate(fields):
         cursor.execute("""
-            INSERT INTO [SurveyBW].[dbo].[FormFields]
+            INSERT INTO public.FormFields
                 (FormId, FieldOrder, FieldType, Label, HelpText, IsRequired, CreatedAt)
-            OUTPUT INSERTED.Id
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING Id
         """, (
             form_id, order, field['type'], field['label'].strip(),
             (field.get('help_text') or '').strip() or None,
@@ -135,8 +128,8 @@ def _insert_fields(cursor, form_id, fields):
         if field['type'] in CHOICE_FIELD_TYPES:
             for opt_order, opt in enumerate(field.get('options', [])):
                 cursor.execute("""
-                    INSERT INTO [SurveyBW].[dbo].[FormFieldOptions] (FieldId, OptionOrder, OptionLabel)
-                    VALUES (?, ?, ?)
+                    INSERT INTO public.FormFieldOptions (FieldId, OptionOrder, OptionLabel)
+                    VALUES (%s, %s, %s)
                 """, (field_id, opt_order, opt['label'].strip()))
 
 
@@ -144,15 +137,15 @@ def _get_form_row(cursor, form_id):
     cursor.execute("""
         SELECT Id, OwnerUserId, Title, Description, Status, IsAnonymous,
                AllowMultipleResponses, ClosesAt, CreatedAt, UpdatedAt
-        FROM [SurveyBW].[dbo].[Forms]
-        WHERE Id = ?
+        FROM public.Forms
+        WHERE Id = %s
     """, (form_id,))
     return cursor.fetchone()
 
 
 def _response_count(cursor, form_id):
     cursor.execute(
-        "SELECT COUNT(*) FROM [SurveyBW].[dbo].[FormResponses] WHERE FormId = ?",
+        "SELECT COUNT(*) FROM public.FormResponses WHERE FormId = %s",
         (form_id,)
     )
     return cursor.fetchone()[0]
@@ -166,8 +159,8 @@ def _can_access(form_row):
 
 def _audit(cursor, form_id, user_id, action, details=None):
     cursor.execute("""
-        INSERT INTO [SurveyBW].[dbo].[FormAuditLog] (FormId, UserId, Action, Details, IpAddress, CreatedAt)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO public.FormAuditLog (FormId, UserId, Action, Details, IpAddress, CreatedAt)
+        VALUES (%s, %s, %s, %s, %s, %s)
     """, (form_id, user_id, action, json.dumps(details) if details else None,
           _client_ip(), datetime.utcnow()))
 
@@ -188,13 +181,13 @@ def api_list_forms():
     try:
         query = """
             SELECT f.Id, f.Title, f.Status, f.CreatedAt, f.UpdatedAt,
-                   (SELECT COUNT(*) FROM [SurveyBW].[dbo].[FormResponses] r WHERE r.FormId = f.Id) AS ResponseCount
-            FROM [SurveyBW].[dbo].[Forms] f
+                   (SELECT COUNT(*) FROM public.FormResponses r WHERE r.FormId = f.Id) AS ResponseCount
+            FROM public.Forms f
         """
         if show_all:
             cursor.execute(query + " ORDER BY f.CreatedAt DESC")
         else:
-            cursor.execute(query + " WHERE f.OwnerUserId = ? ORDER BY f.CreatedAt DESC", (user_id,))
+            cursor.execute(query + " WHERE f.OwnerUserId = %s ORDER BY f.CreatedAt DESC", (user_id,))
 
         forms = [{
             'id': row.Id,
@@ -232,11 +225,11 @@ def api_create_form():
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            INSERT INTO [SurveyBW].[dbo].[Forms]
+            INSERT INTO public.Forms
                 (OwnerUserId, Title, Description, Status, IsAnonymous,
                  AllowMultipleResponses, ClosesAt, CreatedAt)
-            OUTPUT INSERTED.Id
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING Id
         """, (
             user_id, data['title'].strip(), (data.get('description') or '').strip() or None,
             data.get('status', 'draft'), True,
@@ -277,8 +270,8 @@ def api_get_form(form_id):
 
         cursor.execute("""
             SELECT Id, FieldOrder, FieldType, Label, HelpText, IsRequired
-            FROM [SurveyBW].[dbo].[FormFields]
-            WHERE FormId = ?
+            FROM public.FormFields
+            WHERE FormId = %s
             ORDER BY FieldOrder
         """, (form_id,))
         field_rows = cursor.fetchall()
@@ -289,8 +282,8 @@ def api_get_form(form_id):
             if fr.FieldType in CHOICE_FIELD_TYPES:
                 cursor.execute("""
                     SELECT Id, OptionOrder, OptionLabel
-                    FROM [SurveyBW].[dbo].[FormFieldOptions]
-                    WHERE FieldId = ?
+                    FROM public.FormFieldOptions
+                    WHERE FieldId = %s
                     ORDER BY OptionOrder
                 """, (fr.Id,))
                 options = [{'id': o.Id, 'label': o.OptionLabel} for o in cursor.fetchall()]
@@ -334,16 +327,16 @@ def api_list_form_responses(form_id):
 
         cursor.execute("""
             SELECT Id, RespondentEmail, SubmittedAt
-            FROM [SurveyBW].[dbo].[FormResponses]
-            WHERE FormId = ?
+            FROM public.FormResponses
+            WHERE FormId = %s
             ORDER BY SubmittedAt DESC, Id DESC
         """, (form_id,))
         response_rows = cursor.fetchall()
 
         cursor.execute("""
             SELECT Id, FieldOrder, FieldType, Label
-            FROM [SurveyBW].[dbo].[FormFields]
-            WHERE FormId = ?
+            FROM public.FormFields
+            WHERE FormId = %s
             ORDER BY FieldOrder
         """, (form_id,))
         field_rows = cursor.fetchall()
@@ -361,12 +354,12 @@ def api_list_form_responses(form_id):
         for response in response_rows:
             cursor.execute("""
                 SELECT a.Id, a.FieldId, a.AnswerText, o.OptionLabel
-                FROM [SurveyBW].[dbo].[FormResponseAnswers] a
-                LEFT JOIN [SurveyBW].[dbo].[FormResponseAnswerOptions] ao
+                FROM public.FormResponseAnswers a
+                LEFT JOIN public.FormResponseAnswerOptions ao
                     ON ao.ResponseAnswerId = a.Id
-                LEFT JOIN [SurveyBW].[dbo].[FormFieldOptions] o
+                LEFT JOIN public.FormFieldOptions o
                     ON o.Id = ao.OptionId
-                WHERE a.ResponseId = ?
+                WHERE a.ResponseId = %s
                 ORDER BY a.Id, o.OptionOrder
             """, (response.Id,))
 
@@ -450,10 +443,10 @@ def api_update_form(form_id):
             }), 409
 
         cursor.execute("""
-            UPDATE [SurveyBW].[dbo].[Forms]
-            SET Title = ?, Description = ?, Status = ?, IsAnonymous = ?,
-                AllowMultipleResponses = ?, ClosesAt = ?, UpdatedAt = ?
-            WHERE Id = ?
+            UPDATE public.Forms
+            SET Title = %s, Description = %s, Status = %s, IsAnonymous = %s,
+                AllowMultipleResponses = %s, ClosesAt = %s, UpdatedAt = %s
+            WHERE Id = %s
         """, (
             data['title'].strip(), (data.get('description') or '').strip() or None,
             data.get('status', form_row.Status), True,
@@ -464,7 +457,7 @@ def api_update_form(form_id):
         if fields_provided:
             # Sem respostas ainda -> seguro substituir a estrutura toda.
             # ON DELETE CASCADE em FormFieldOptions trata das opções sozinho.
-            cursor.execute("DELETE FROM [SurveyBW].[dbo].[FormFields] WHERE FormId = ?", (form_id,))
+            cursor.execute("DELETE FROM public.FormFields WHERE FormId = %s", (form_id,))
             _insert_fields(cursor, form_id, data['fields'])
 
         _audit(cursor, form_id, user_id, 'updated', {'fields_replaced': fields_provided})
@@ -508,11 +501,11 @@ def api_delete_form(form_id):
         # de propósito) - por isso o registo de auditoria fica órfão de FormId
         # (NULL) em vez de ser apagado, preservando o rasto de quem fez o quê.
         cursor.execute(
-            "UPDATE [SurveyBW].[dbo].[FormAuditLog] SET FormId = NULL WHERE FormId = ?",
+            "UPDATE public.FormAuditLog SET FormId = NULL WHERE FormId = %s",
             (form_id,)
         )
         _audit(cursor, None, user_id, 'deleted', {'form_id': form_id, 'title': form_row.Title})
-        cursor.execute("DELETE FROM [SurveyBW].[dbo].[Forms] WHERE Id = ?", (form_id,))
+        cursor.execute("DELETE FROM public.Forms WHERE Id = %s", (form_id,))
 
         conn.commit()
         return jsonify({'success': True})
@@ -523,6 +516,7 @@ def api_delete_form(form_id):
     finally:
         cursor.close()
         conn.close()
+
 
 # ============================================================
 # PARTILHA — GERAR LINK
@@ -542,8 +536,8 @@ def api_list_share_links(form_id):
 
         cursor.execute("""
             SELECT Id, InvitedEmail, MaxResponses, ResponseCount, ExpiresAt, IsActive, CreatedAt
-            FROM [SurveyBW].[dbo].[FormShareLinks]
-            WHERE FormId = ?
+            FROM public.FormShareLinks
+            WHERE FormId = %s
             ORDER BY CreatedAt DESC
         """, (form_id,))
 
@@ -627,10 +621,10 @@ def api_create_share_link(form_id):
             token_hash = hashlib.sha256(token.encode()).hexdigest()
 
             cursor.execute("""
-                INSERT INTO [SurveyBW].[dbo].[FormShareLinks]
+                INSERT INTO public.FormShareLinks
                     (FormId, TokenHash, InvitedEmail, MaxResponses, ExpiresAt, IsActive, CreatedByUserId, CreatedAt)
-                OUTPUT INSERTED.Id
-                VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, TRUE, %s, %s)
+                RETURNING Id
             """, (form_id, token_hash, invited_email, max_responses, expires_at, user_id, datetime.utcnow()))
             link_id = cursor.fetchone()[0]
             generated_links.append({
@@ -704,9 +698,9 @@ def api_revoke_share_link(link_id):
     try:
         cursor.execute("""
             SELECT sl.Id, sl.FormId, f.OwnerUserId
-            FROM [SurveyBW].[dbo].[FormShareLinks] sl
-            JOIN [SurveyBW].[dbo].[Forms] f ON f.Id = sl.FormId
-            WHERE sl.Id = ?
+            FROM public.FormShareLinks sl
+            JOIN public.Forms f ON f.Id = sl.FormId
+            WHERE sl.Id = %s
         """, (link_id,))
         row = cursor.fetchone()
 
@@ -715,7 +709,7 @@ def api_revoke_share_link(link_id):
         if row.OwnerUserId != user_id and not session.get('is_admin'):
             return jsonify({'success': False, 'message': 'Sem permissão.'}), 403
 
-        cursor.execute("UPDATE [SurveyBW].[dbo].[FormShareLinks] SET IsActive = 0 WHERE Id = ?", (link_id,))
+        cursor.execute("UPDATE public.FormShareLinks SET IsActive = FALSE WHERE Id = %s", (link_id,))
         _audit(cursor, row.FormId, user_id, 'link_revoked', {'link_id': link_id})
         conn.commit()
 
@@ -727,6 +721,7 @@ def api_revoke_share_link(link_id):
     finally:
         cursor.close()
         conn.close()
+
 
 # ============================================================
 # PÁGINA PÚBLICA DE RESPOSTA (sem login)
@@ -740,15 +735,14 @@ def public_response_page(token):
     cursor = conn.cursor()
     try:
         cursor.execute("""
-                 SELECT sl.Id, sl.FormId, sl.MaxResponses, sl.ResponseCount, sl.ExpiresAt, sl.IsActive,
-                     f.Title, f.Description, f.Status, f.IsAnonymous
-            FROM [SurveyBW].[dbo].[FormShareLinks] sl
-            JOIN [SurveyBW].[dbo].[Forms] f ON f.Id = sl.FormId
-            WHERE sl.TokenHash = ?
+            SELECT sl.Id, sl.FormId, sl.MaxResponses, sl.ResponseCount, sl.ExpiresAt, sl.IsActive,
+                   f.Title, f.Description, f.Status, f.IsAnonymous
+            FROM public.FormShareLinks sl
+            JOIN public.Forms f ON f.Id = sl.FormId
+            WHERE sl.TokenHash = %s
         """, (token_hash,))
         row = cursor.fetchone()
 
-       
         invalid = (
             row is None
             or not row.IsActive
@@ -767,8 +761,8 @@ def public_response_page(token):
 
         cursor.execute("""
             SELECT Id, FieldOrder, FieldType, Label, HelpText, IsRequired
-            FROM [SurveyBW].[dbo].[FormFields]
-            WHERE FormId = ?
+            FROM public.FormFields
+            WHERE FormId = %s
             ORDER BY FieldOrder
         """, (row.FormId,))
         field_rows = cursor.fetchall()
@@ -779,8 +773,8 @@ def public_response_page(token):
             if fr.FieldType in CHOICE_FIELD_TYPES:
                 cursor.execute("""
                     SELECT Id, OptionOrder, OptionLabel
-                    FROM [SurveyBW].[dbo].[FormFieldOptions]
-                    WHERE FieldId = ?
+                    FROM public.FormFieldOptions
+                    WHERE FieldId = %s
                     ORDER BY OptionOrder
                 """, (fr.Id,))
                 options = [{'id': o.Id, 'label': o.OptionLabel} for o in cursor.fetchall()]
@@ -828,10 +822,10 @@ def public_response_page(token):
                         return jsonify({'success': False, 'message': 'Resposta inválida.'}), 400
 
             cursor.execute("""
-                INSERT INTO [SurveyBW].[dbo].[FormResponses]
+                INSERT INTO public.FormResponses
                     (FormId, ShareLinkId, RespondentEmail, IpAddress, UserAgent, SubmittedAt)
-                OUTPUT INSERTED.Id
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING Id
             """, (
                 row.FormId, row.Id,
                 session.get('email') or session.get('operator_number'),
@@ -842,30 +836,29 @@ def public_response_page(token):
 
             for field_id, field in fields_by_id.items():
                 value = answers_by_field.get(field_id)
-                values = value if isinstance(value, list) else [value]
                 answer_text = None if field['type'] in CHOICE_FIELD_TYPES else (
                     '' if value is None else str(value)
                 )
                 cursor.execute("""
-                    INSERT INTO [SurveyBW].[dbo].[FormResponseAnswers]
+                    INSERT INTO public.FormResponseAnswers
                         (ResponseId, FieldId, AnswerText)
-                    OUTPUT INSERTED.Id
-                    VALUES (?, ?, ?)
+                    VALUES (%s, %s, %s)
+                    RETURNING Id
                 """, (response_id, field_id, answer_text))
                 answer_id = cursor.fetchone()[0]
 
                 if field['type'] in CHOICE_FIELD_TYPES and value not in (None, '', []):
                     for option_id in (value if isinstance(value, list) else [value]):
                         cursor.execute("""
-                            INSERT INTO [SurveyBW].[dbo].[FormResponseAnswerOptions]
+                            INSERT INTO public.FormResponseAnswerOptions
                                 (ResponseAnswerId, OptionId)
-                            VALUES (?, ?)
+                            VALUES (%s, %s)
                         """, (answer_id, int(option_id)))
 
             cursor.execute("""
-                UPDATE [SurveyBW].[dbo].[FormShareLinks]
+                UPDATE public.FormShareLinks
                 SET ResponseCount = ResponseCount + 1
-                WHERE Id = ? AND IsActive = 1
+                WHERE Id = %s AND IsActive = TRUE
                   AND (MaxResponses IS NULL OR ResponseCount < MaxResponses)
             """, (row.Id,))
             if cursor.rowcount != 1:
@@ -885,6 +878,7 @@ def public_response_page(token):
             show_app_shell=False,
         )
     except Exception:
+        conn.rollback()
         logger.exception("Erro ao carregar página pública de resposta (token hash não registado)")
         return render_template(
             'surveys/link_invalid.html',

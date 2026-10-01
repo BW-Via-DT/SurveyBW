@@ -1,5 +1,5 @@
 [
   {
-    "connection_string": "DRIVER={ODBC Driver 17 for SQL Server};SERVER=10.30.64.43;DATABASE=PCNs; UID=rastreabilidadeuser;PWD=rastreabilidadeuser@123"
+    "connection_string": "host=dpg-dav3furncjis73924ck0-a.frankfurt-postgres.render.com port=5432 dbname=teste_db_ir7l user=testedbuser password=1f9S50vag1kHiHH4YwIKt2fNExcirPVu sslmode=require connect_timeout=10"
   }
 ]

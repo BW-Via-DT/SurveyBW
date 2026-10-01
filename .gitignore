@@ -175,3 +175,7 @@ cython_debug/
 .pypirc
 
 web.config
+
+connections/settings.json
+.env
+__pycache__/

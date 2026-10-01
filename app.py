@@ -1,16 +1,24 @@
 import logging
 import logging.handlers
+import os
 from datetime import datetime
 
 from flask import redirect, render_template, session, url_for
 from flask_mail import Mail
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from api import create_app
 from config import get_config
 from extensions import limiter, csrf, talisman
 
+# O Render define RENDER=true automaticamente. Em local não existe.
+ON_RENDER = bool(os.environ.get('RENDER'))
+
 app = create_app()
 app.config.from_object(get_config())
+
+if ON_RENDER:
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 mail = Mail(app)
 limiter.init_app(app)
@@ -39,25 +47,28 @@ def configure_logging():
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+    level = logging.DEBUG if app.debug else logging.INFO
 
-    file_handler = logging.handlers.RotatingFileHandler(
-        'app.log', maxBytes=10 * 1024 * 1024, backupCount=5
-    )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(logging.INFO)
-
+    # Consola: no Render é aqui que os logs aparecem no dashboard.
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
-    console_handler.setLevel(logging.DEBUG if app.debug else logging.INFO)
+    console_handler.setLevel(level)
 
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG if app.debug else logging.INFO)
-    root_logger.addHandler(file_handler)
+    root_logger.setLevel(level)
     root_logger.addHandler(console_handler)
 
+    # Ficheiro só em local: no Render o disco é efémero.
+    if not ON_RENDER:
+        file_handler = logging.handlers.RotatingFileHandler(
+            'app.log', maxBytes=10 * 1024 * 1024, backupCount=5
+        )
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(logging.INFO)
+        root_logger.addHandler(file_handler)
+
     app.logger.setLevel(logging.INFO)
-    app.logger.addHandler(file_handler)
-    app.logger.propagate = False
+    app.logger.propagate = True  # usa os handlers do root, sem duplicar
 
 
 configure_logging()
@@ -89,6 +100,13 @@ def index():
     if 'local_user_id' in session:
         return redirect(url_for('surveys_routes.surveys_page'))
     return render_template('index.html', year=year)
+
+
+@app.route('/healthz')
+@talisman(force_https=False)
+def healthz():
+    """Health check do Render (e para pings externos). Não redireciona para HTTPS."""
+    return 'ok', 200
 
 
 if __name__ == '__main__':

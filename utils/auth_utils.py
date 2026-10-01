@@ -1,6 +1,10 @@
+import logging
+
 from flask import session
-import pyodbc
-from utils.call_conn import get_db_connection
+
+from utils.call_conn import connect
+
+logger = logging.getLogger("auth_utils")
 
 
 def is_authenticated():
@@ -9,13 +13,24 @@ def is_authenticated():
 
 
 def connect_auth():
-    conn_str = get_db_connection()
-    return pyodbc.connect(conn_str)
+    """Mantido por compatibilidade. A tabela operator está agora na mesma BD."""
+    return connect()
+
+
+def _operator_to_dict(row):
+    email = row[2] or ''
+    username = email.split('@')[0] if '@' in email else email
+    return {
+        'number': row[0],
+        'name': row[1],
+        'email': email,
+        'username': username,
+    }
 
 
 def get_operator_from_app_accounts(username=None, email=None):
     """
-    Devolve os dados oficiais do utilizador vindos de APP_DT_Accounts.dbo.Operator.
+    Devolve os dados oficiais do utilizador vindos da tabela public.operator.
 
     Pode procurar por:
     - email exato;
@@ -46,7 +61,7 @@ def get_operator_from_app_accounts(username=None, email=None):
     cursor = None
 
     try:
-        conn = connect_auth()
+        conn = connect()
         cursor = conn.cursor()
 
         row = None
@@ -54,12 +69,10 @@ def get_operator_from_app_accounts(username=None, email=None):
         # 1. Primeiro tenta procurar por email exato.
         if email:
             cursor.execute("""
-                SELECT
-                    CAST([number] AS VARCHAR),
-                    [name],
-                    [email]
-                FROM [APP_DT_Accounts].[dbo].[Operator]
-                WHERE LOWER([email]) = LOWER(?)
+                SELECT CAST(number AS VARCHAR), name, email
+                FROM public.operator
+                WHERE LOWER(email) = LOWER(%s)
+                LIMIT 1
             """, (email,))
 
             row = cursor.fetchone()
@@ -72,40 +85,29 @@ def get_operator_from_app_accounts(username=None, email=None):
             # Se o username já for um email, tenta email exato.
             if '@' in clean_username:
                 cursor.execute("""
-                    SELECT
-                        CAST([number] AS VARCHAR),
-                        [name],
-                        [email]
-                    FROM [APP_DT_Accounts].[dbo].[Operator]
-                    WHERE LOWER([email]) = LOWER(?)
+                    SELECT CAST(number AS VARCHAR), name, email
+                    FROM public.operator
+                    WHERE LOWER(email) = LOWER(%s)
+                    LIMIT 1
                 """, (clean_username,))
             else:
+                # Compara a parte antes do @ (evita os wildcards do LIKE, como o "_").
                 cursor.execute("""
-                    SELECT
-                        CAST([number] AS VARCHAR),
-                        [name],
-                        [email]
-                    FROM [APP_DT_Accounts].[dbo].[Operator]
-                    WHERE LOWER([email]) LIKE LOWER(?)
-                """, (clean_username + '@%',))
+                    SELECT CAST(number AS VARCHAR), name, email
+                    FROM public.operator
+                    WHERE LOWER(split_part(email, '@', 1)) = LOWER(%s)
+                    LIMIT 1
+                """, (clean_username,))
 
             row = cursor.fetchone()
 
         if not row:
             return None
 
-        operator_email = row[2] or ''
-        operator_username = operator_email.split('@')[0] if '@' in operator_email else operator_email
+        return _operator_to_dict(row)
 
-        return {
-            'number': row[0],
-            'name': row[1],
-            'email': operator_email,
-            'username': operator_username
-        }
-
-    except Exception as e:
-        print(f"[get_operator_from_app_accounts] Erro: {str(e)}")
+    except Exception:
+        logger.exception("[get_operator_from_app_accounts] Erro")
         return None
 
     finally:
@@ -125,16 +127,13 @@ def get_operator_by_number(number):
     cursor = None
 
     try:
-        conn = connect_auth()
+        conn = connect()
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT
-                CAST([number] AS VARCHAR),
-                [name],
-                [email]
-            FROM [APP_DT_Accounts].[dbo].[Operator]
-            WHERE [number] = ?
+            SELECT CAST(number AS VARCHAR), name, email
+            FROM public.operator
+            WHERE CAST(number AS VARCHAR) = CAST(%s AS VARCHAR)
         """, (number,))
 
         row = cursor.fetchone()
@@ -142,18 +141,10 @@ def get_operator_by_number(number):
         if not row:
             return None
 
-        email = row[2] or ''
-        username = email.split('@')[0] if '@' in email else email
+        return _operator_to_dict(row)
 
-        return {
-            'number': row[0],
-            'name': row[1],
-            'email': email,
-            'username': username
-        }
-
-    except Exception as e:
-        print(f"Erro ao obter operador pelo number: {str(e)}")
+    except Exception:
+        logger.exception("Erro ao obter operador pelo number")
         return None
 
     finally:
@@ -171,28 +162,26 @@ def get_username_by_number(number):
 
 def _get_operator_number_by_email(email, fallback_id):
     """
-    Vai buscar o number do colaborador na tabela Operator a partir do email.
+    Vai buscar o number do colaborador na tabela operator a partir do email.
     Se não encontrar, devolve fallback_id.
     """
 
     if not email:
-        print(f"[_get_operator_number_by_email] email vazio/None -> a usar fallback_id={fallback_id!r}")
+        logger.warning("[_get_operator_number_by_email] email vazio/None -> a usar fallback_id=%r", fallback_id)
         return fallback_id
 
     conn_op = None
     cursor_op = None
 
     try:
-        conn_op = connect_auth()
+        conn_op = connect()
         cursor_op = conn_op.cursor()
 
         cursor_op.execute("""
-            SELECT
-                CAST([number] AS VARCHAR),
-                [name],
-                [costcenter]
-            FROM [APP_DT_Accounts].[dbo].[Operator]
-            WHERE LOWER([email]) = LOWER(?)
+            SELECT CAST(number AS VARCHAR), name, costcenter
+            FROM public.operator
+            WHERE LOWER(email) = LOWER(%s)
+            LIMIT 1
         """, (email,))
 
         row = cursor_op.fetchone()
@@ -202,11 +191,10 @@ def _get_operator_number_by_email(email, fallback_id):
 
         return fallback_id
 
-    except Exception as e:
-        print(
-            f"[_get_operator_number_by_email] ERRO ao consultar Operator "
-            f"para email={email!r} -> a usar fallback_id={fallback_id!r}. "
-            f"Erro: {str(e)}"
+    except Exception:
+        logger.exception(
+            "[_get_operator_number_by_email] ERRO ao consultar operator para email=%r -> a usar fallback_id=%r",
+            email, fallback_id
         )
         return fallback_id
 

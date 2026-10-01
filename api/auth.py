@@ -2,7 +2,7 @@ import logging
 import secrets
 from datetime import datetime, timedelta
 
-import pyodbc
+import psycopg2
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHash, VerifyMismatchError
 from flask import (Blueprint, current_app, flash, jsonify, redirect,
@@ -14,15 +14,19 @@ from utils.auth_utils import get_operator_from_app_accounts
 
 auth_api = Blueprint("auth", __name__)
 logger = logging.getLogger("auth")
-ph = PasswordHasher()  
+ph = PasswordHasher()
 
 MAX_FAILED_ATTEMPTS = 5
 LOCKOUT_MINUTES = 15
 MIN_PASSWORD_LENGTH = 10
 
+USER_COLUMNS = """Id, OperatorNumber, PasswordHash, Name, Email, isAdmin,
+                   FailedAttempts, LockedUntil, MFAEnabled, MFASecret"""
+
 
 def connect():
-    return pyodbc.connect(get_db_connection())
+    # get_db_connection() devolve um dict com host, port, dbname, user, password
+    return psycopg2.connect(get_db_connection())
 
 
 def _post_login_redirect():
@@ -51,9 +55,9 @@ def log_login(operator_number=None, local_user_id=None, success=True,
         ip_address = request.headers.get('X-Forwarded-For', request.remote_addr or '')
         ip_address = ip_address.split(',')[0].strip()
         cursor.execute("""
-            INSERT INTO [SurveyBW].[dbo].[LoginHistory]
+            INSERT INTO public.LoginHistory
                 (OperatorNumber, LocalUserId, AttemptedUsername, IpAddress, Success, FailureReason, CreatedAt)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (operator_number, local_user_id, attempted_username, ip_address,
               success, failure_reason, datetime.utcnow()))
         conn.commit()
@@ -64,6 +68,7 @@ def log_login(operator_number=None, local_user_id=None, success=True,
             cursor.close()
         if conn:
             conn.close()
+
 
 def _clean_windows_username(raw_user):
     """
@@ -86,20 +91,18 @@ def _clean_windows_username(raw_user):
 
 
 def _find_local_user(identifier):
-
     conn = cursor = None
 
     try:
         conn = connect()
         cursor = conn.cursor()
 
-        cursor.execute("""
-            SELECT Id, OperatorNumber, PasswordHash, Name, Email, isAdmin,
-                   FailedAttempts, LockedUntil, MFAEnabled, MFASecret
-            FROM [SurveyBW].[dbo].[Users]
+        cursor.execute(f"""
+            SELECT {USER_COLUMNS}
+            FROM public.Users
             WHERE
-                LOWER(Email) = LOWER(?)
-                OR LOWER(LEFT(Email, CHARINDEX('@', Email + '@') - 1)) = LOWER(?)
+                LOWER(Email) = LOWER(%s)
+                OR LOWER(split_part(Email, '@', 1)) = LOWER(%s)
         """, (identifier, identifier))
 
         return cursor.fetchone()
@@ -124,7 +127,6 @@ def _ensure_local_user_from_app_accounts(identifier):
 
 
 def _sync_or_create_local_user_from_operator(operator):
-
     if not operator:
         return None
 
@@ -138,78 +140,54 @@ def _sync_or_create_local_user_from_operator(operator):
         conn = connect()
         cursor = conn.cursor()
 
-        cursor.execute("""
-            SELECT Id, OperatorNumber, PasswordHash, Name, Email, isAdmin,
-                   FailedAttempts, LockedUntil, MFAEnabled, MFASecret
-            FROM [SurveyBW].[dbo].[Users]
-            WHERE OperatorNumber = ?
-               OR LOWER(Email) = LOWER(?)
+        cursor.execute(f"""
+            SELECT {USER_COLUMNS}
+            FROM public.Users
+            WHERE OperatorNumber = %s
+               OR LOWER(Email) = LOWER(%s)
         """, (operator_number, email))
 
         existing = cursor.fetchone()
 
         if existing:
-            local_id = existing.Id
+            local_id = existing[0]
 
             cursor.execute("""
-                UPDATE [SurveyBW].[dbo].[Users]
-                SET OperatorNumber = ?,
-                    Name = ?,
-                    Email = ?,
-                    UpdatedAt = ?
-                WHERE Id = ?
-            """, (
-                operator_number,
-                name,
-                email,
-                datetime.utcnow(),
-                local_id
-            ))
+                UPDATE public.Users
+                SET OperatorNumber = %s,
+                    Name = %s,
+                    Email = %s,
+                    UpdatedAt = %s
+                WHERE Id = %s
+            """, (operator_number, name, email, datetime.utcnow(), local_id))
 
             conn.commit()
 
-            cursor.execute("""
-                SELECT Id, OperatorNumber, PasswordHash, Name, Email, isAdmin,
-                       FailedAttempts, LockedUntil, MFAEnabled, MFASecret
-                FROM [SurveyBW].[dbo].[Users]
-                WHERE Id = ?
+            cursor.execute(f"""
+                SELECT {USER_COLUMNS}
+                FROM public.Users
+                WHERE Id = %s
             """, (local_id,))
 
             return cursor.fetchone()
 
+        now = datetime.utcnow()
         cursor.execute("""
-            INSERT INTO [SurveyBW].[dbo].[Users]
-                (
-                    OperatorNumber,
-                    Name,
-                    Email,
-                    PasswordHash,
-                    isAdmin,
-                    FailedAttempts,
-                    LockedUntil,
-                    CreatedAt,
-                    UpdatedAt,
-                    MFASecret,
-                    MFAEnabled
-                )
-            OUTPUT INSERTED.Id
-            VALUES (?, ?, ?, '', 0, 0, NULL, ?, ?, NULL, 0)
-        """, (
-            operator_number,
-            name,
-            email,
-            datetime.utcnow(),
-            datetime.utcnow()
-        ))
+            INSERT INTO public.Users
+                (OperatorNumber, Name, Email, PasswordHash, isAdmin,
+                 FailedAttempts, LockedUntil, CreatedAt, UpdatedAt,
+                 MFASecret, MFAEnabled)
+            VALUES (%s, %s, %s, '', FALSE, 0, NULL, %s, %s, NULL, FALSE)
+            RETURNING Id
+        """, (operator_number, name, email, now, now))
 
         local_id = cursor.fetchone()[0]
         conn.commit()
 
-        cursor.execute("""
-            SELECT Id, OperatorNumber, PasswordHash, Name, Email, isAdmin,
-                   FailedAttempts, LockedUntil, MFAEnabled, MFASecret
-            FROM [SurveyBW].[dbo].[Users]
-            WHERE Id = ?
+        cursor.execute(f"""
+            SELECT {USER_COLUMNS}
+            FROM public.Users
+            WHERE Id = %s
         """, (local_id,))
 
         return cursor.fetchone()
@@ -438,10 +416,10 @@ def login():
         is_xhr=is_xhr
     )
 
+
 @auth_api.route('/windows_login')
 @limiter.limit("10 per minute")
 def windows_login():
-
     raw_user = request.environ.get('REMOTE_USER')
     username = _clean_windows_username(raw_user)
 
@@ -529,6 +507,7 @@ def windows_login():
         is_xhr=False
     )
 
+
 def _login_fail(is_xhr, message):
     if is_xhr:
         return jsonify({'success': False, 'message': message}), 401
@@ -545,9 +524,9 @@ def _register_failed_attempt(local_id, current_failed_attempts):
         locked_until = datetime.utcnow() + timedelta(minutes=LOCKOUT_MINUTES)
         new_count = 0
     cursor.execute("""
-        UPDATE [SurveyBW].[dbo].[Users]
-        SET FailedAttempts = ?, LockedUntil = ?
-        WHERE Id = ?
+        UPDATE public.Users
+        SET FailedAttempts = %s, LockedUntil = %s
+        WHERE Id = %s
     """, (new_count, locked_until, local_id))
     conn.commit()
     cursor.close()
@@ -558,9 +537,9 @@ def _reset_failed_attempts(local_id):
     conn = connect()
     cursor = conn.cursor()
     cursor.execute("""
-        UPDATE [SurveyBW].[dbo].[Users]
+        UPDATE public.Users
         SET FailedAttempts = 0, LockedUntil = NULL
-        WHERE Id = ?
+        WHERE Id = %s
     """, (local_id,))
     conn.commit()
     cursor.close()
@@ -570,7 +549,7 @@ def _reset_failed_attempts(local_id):
 def _update_password_hash(local_id, new_hash):
     conn = connect()
     cursor = conn.cursor()
-    cursor.execute("UPDATE [SurveyBW].[dbo].[Users] SET PasswordHash = ? WHERE Id = ?", (new_hash, local_id))
+    cursor.execute("UPDATE public.Users SET PasswordHash = %s WHERE Id = %s", (new_hash, local_id))
     conn.commit()
     cursor.close()
     conn.close()
@@ -580,6 +559,7 @@ def _update_password_hash(local_id, new_hash):
 def logout():
     session.clear()
     return redirect(url_for('index'))
+
 
 @auth_api.route('/initial_password', methods=['GET'])
 def initial_password():
@@ -604,6 +584,7 @@ def initial_password():
 
     return render_template('initial_password.html')
 
+
 @auth_api.route('/set_initial_password', methods=['POST'])
 @limiter.limit("5 per hour")
 def set_initial_password():
@@ -611,26 +592,17 @@ def set_initial_password():
     expires = session.get('initial_password_expires')
 
     if not local_id or not expires:
-        return jsonify({
-            'success': False,
-            'message': 'Invalid session.'
-        }), 401
+        return jsonify({'success': False, 'message': 'Invalid session.'}), 401
 
     try:
         expires_dt = datetime.fromisoformat(expires)
     except ValueError:
         session.clear()
-        return jsonify({
-            'success': False,
-            'message': 'Invalid session.'
-        }), 401
+        return jsonify({'success': False, 'message': 'Invalid session.'}), 401
 
     if datetime.utcnow() > expires_dt:
         session.clear()
-        return jsonify({
-            'success': False,
-            'message': 'Session expired.'
-        }), 401
+        return jsonify({'success': False, 'message': 'Session expired.'}), 401
 
     data = request.get_json(silent=True) or {}
     new_password = data.get('new_password', '')
@@ -656,20 +628,16 @@ def set_initial_password():
         conn = connect()
         cursor = conn.cursor()
 
-        # Só deixa definir password inicial se ainda estiver NULL.
+        # Só deixa definir password inicial se ainda estiver NULL/vazia.
         cursor.execute("""
-            UPDATE [SurveyBW].[dbo].[Users]
-            SET PasswordHash = ?,
+            UPDATE public.Users
+            SET PasswordHash = %s,
                 FailedAttempts = 0,
                 LockedUntil = NULL,
-                UpdatedAt = ?
-            WHERE Id = ?
+                UpdatedAt = %s
+            WHERE Id = %s
               AND (PasswordHash IS NULL OR PasswordHash = '')
-        """, (
-            new_hash,
-            datetime.utcnow(),
-            local_id
-        ))
+        """, (new_hash, datetime.utcnow(), local_id))
 
         if cursor.rowcount != 1:
             conn.rollback()
@@ -687,10 +655,7 @@ def set_initial_password():
         if conn:
             conn.rollback()
 
-        return jsonify({
-            'success': False,
-            'message': 'Could not set password.'
-        }), 500
+        return jsonify({'success': False, 'message': 'Could not set password.'}), 500
 
     finally:
         if cursor:
@@ -705,10 +670,8 @@ def set_initial_password():
     ).isoformat()
     session['needs_password_setup'] = False
 
-    return jsonify({
-        'success': True,
-        'redirect': url_for('mfa.mfa_enroll')
-    })
+    return jsonify({'success': True, 'redirect': url_for('mfa.mfa_enroll')})
+
 
 @auth_api.route('/change_password', methods=['POST'])
 @limiter.limit("10 per hour")
@@ -729,7 +692,7 @@ def change_password():
 
     conn = connect()
     cursor = conn.cursor()
-    cursor.execute("SELECT PasswordHash FROM [SurveyBW].[dbo].[Users] WHERE Id = ?", (local_user_id,))
+    cursor.execute("SELECT PasswordHash FROM public.Users WHERE Id = %s", (local_user_id,))
     row = cursor.fetchone()
 
     if not row:
@@ -753,7 +716,7 @@ def change_password():
         return jsonify({'success': False, 'message': 'The current password is incorrect'}), 401
 
     new_hash = ph.hash(new_password)
-    cursor.execute("UPDATE [SurveyBW].[dbo].[Users] SET PasswordHash = ? WHERE Id = ?", (new_hash, local_user_id))
+    cursor.execute("UPDATE public.Users SET PasswordHash = %s WHERE Id = %s", (new_hash, local_user_id))
     conn.commit()
     cursor.close()
     conn.close()
@@ -777,19 +740,19 @@ def send_reset_link():
     cursor = conn.cursor()
     cursor.execute("""
         SELECT Id, Email
-        FROM [SurveyBW].[dbo].[Users]
-        WHERE LOWER(Email) = LOWER(?)
-           OR LOWER(LEFT(Email, CHARINDEX('@', Email + '@') - 1)) = LOWER(?)
+        FROM public.Users
+        WHERE LOWER(Email) = LOWER(%s)
+           OR LOWER(split_part(Email, '@', 1)) = LOWER(%s)
     """, (username, username))
     account = cursor.fetchone()
 
     if account and account[1]:
         token = secrets.token_urlsafe(32)
         expiration_time = datetime.utcnow() + timedelta(hours=2)
-        cursor.execute("DELETE FROM [SurveyBW].[dbo].[Tokens] WHERE OperatorId = ?", (account[0],))
+        cursor.execute("DELETE FROM public.Tokens WHERE OperatorId = %s", (account[0],))
         cursor.execute("""
-            INSERT INTO [SurveyBW].[dbo].[Tokens] (OperatorId, Token, DataExpiracao, CreatedAt)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO public.Tokens (OperatorId, Token, DataExpiracao, CreatedAt)
+            VALUES (%s, %s, %s, %s)
         """, (account[0], token, expiration_time, datetime.utcnow()))
         conn.commit()
 
@@ -814,16 +777,16 @@ def send_reset_link():
 def reset_password(token):
     conn = connect()
     cursor = conn.cursor()
-    cursor.execute("SELECT OperatorId, DataExpiracao FROM [SurveyBW].[dbo].[Tokens] WHERE Token = ?", (token,))
+    cursor.execute("SELECT OperatorId, DataExpiracao FROM public.Tokens WHERE Token = %s", (token,))
     token_record = cursor.fetchone()
 
-    if not token_record or datetime.utcnow() > token_record.DataExpiracao:
+    if not token_record or datetime.utcnow() > token_record[1]:
         cursor.close()
         conn.close()
         flash('Invalid or expired token. Please request a new reset link.', category='error')
         return redirect(url_for('index'))
 
-    operator_id = token_record.OperatorId
+    operator_id = token_record[0]
 
     if request.method == 'POST':
         new_password = request.form.get('newPassword', '')
@@ -843,11 +806,11 @@ def reset_password(token):
 
         new_hash = ph.hash(new_password)
         cursor.execute("""
-            UPDATE [SurveyBW].[dbo].[Users]
-            SET PasswordHash = ?, FailedAttempts = 0, LockedUntil = NULL
-            WHERE Id = ?
+            UPDATE public.Users
+            SET PasswordHash = %s, FailedAttempts = 0, LockedUntil = NULL
+            WHERE Id = %s
         """, (new_hash, operator_id))
-        cursor.execute("DELETE FROM [SurveyBW].[dbo].[Tokens] WHERE Token = ?", (token,))
+        cursor.execute("DELETE FROM public.Tokens WHERE Token = %s", (token,))
         conn.commit()
         cursor.close()
         conn.close()
