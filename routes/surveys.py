@@ -30,3 +30,4 @@ def survey_responses_page(form_id):
     if not is_authenticated():
         return redirect(url_for('index'))
     return render_template('surveys/responses.html', page_title='Respostas', form_id=form_id)
+

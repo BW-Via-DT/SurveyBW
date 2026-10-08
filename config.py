@@ -48,10 +48,12 @@ class Config:
     RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')
 
     DEBUG = False
+    MFA_ENABLED = True
 
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    MFA_ENABLED = False
     # Só em local sem HTTPS. Em qualquer ambiente exposto isto TEM de ser True.
     SESSION_COOKIE_SECURE = False
 

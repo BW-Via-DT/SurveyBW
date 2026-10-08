@@ -284,6 +284,9 @@
             <button class="sv-grid-action" data-action="responses" data-id="${params.data.id}" title="Ver respostas">
               <i class="fas fa-chart-bar"></i>
             </button>
+            <button class="sv-grid-action" data-action="academia" data-id="${params.data.id}" title="Gerar link de resposta">
+              <i class="fas fa-external-link-alt"></i>
+            </button>
             <button class="sv-grid-action danger" data-action="delete" data-id="${params.data.id}" data-nome="${params.data.nome}" title="Apagar">
               <i class="fas fa-trash"></i>
             </button>
@@ -311,6 +314,17 @@
           openShareModal(id, btn.dataset.nome);
         } else if (btn.dataset.action === 'responses') {
           window.location.href = `/surveys/${id}/responses`;
+        } else if (btn.dataset.action === 'academia') {
+          const responseUrl = new URL('/responder', window.location.origin);
+          responseUrl.searchParams.set('form', id);
+          responseUrl.searchParams.set('number', '150339');
+          responseUrl.searchParams.set('name', 'Ruben Morais');
+
+          navigator.clipboard.writeText(responseUrl.href)
+            .then(() => window.showToast('Link copiado.', 'success'))
+            .catch(() => window.showToast('Link gerado.', 'success'));
+
+          window.open(responseUrl.href, '_blank');
         }
       }
     };

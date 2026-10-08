@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block title %}Responder a Questionário — Academia{% endblock %}
+{% block page_title %}Responder a Questionário{% endblock %}
+{% block extra_css %}
+<link href="{{ url_for('static', filename='css/pages/evaluations.css') }}" rel="stylesheet" />
+{% endblock %}
+{% block content %}
+<div class="container-fluid px-4 py-3">
+  <div id="respondLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-2 text-muted">A carregar questionário...</p>
+  </div>
+
+  <div id="respondContent" class="d-none">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h4 class="fw-bold m-0" id="respondTitle"></h4>
+        <small class="text-muted" id="respondSubtitle"></small>
+      </div>
+      <a href="{{ url_for('surveys_routes.surveys_page') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i>Voltar
+      </a>
+    </div>
+
+    <form id="respondForm">
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <label for="respNumber" class="form-label fw-semibold">Número</label>
+          <input type="text" class="form-control" id="respNumber" maxlength="50" required>
+        </div>
+        <div class="col-md-8">
+          <label for="respName" class="form-label fw-semibold">Nome</label>
+          <input type="text" class="form-control" id="respName" maxlength="200" required>
+        </div>
+      </div>
+      <div id="respondSections"></div>
+      <div class="mt-4 d-flex gap-2 justify-content-end">
+        <a href="{{ url_for('surveys_routes.surveys_page') }}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary px-4" id="respondSubmitBtn">
+          <i class="far fa-paper-plane me-1"></i>Submeter
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div id="respondSuccess" class="d-none text-center py-5">
+    <i class="far fa-check-circle text-success fs-1 mb-3 d-block"></i>
+    <h5>Questionário submetido com sucesso!</h5>
+    <p class="text-muted">Obrigado pela sua participação.</p>
+    <a href="{{ url_for('surveys_routes.surveys_page') }}" class="btn btn-primary mt-2">Voltar aos Formulários</a>
+  </div>
+
+  <div id="respondError" class="d-none text-center py-5">
+    <i class="far fa-times-circle text-danger fs-1 mb-3 d-block"></i>
+    <h5>Erro ao carregar questionário</h5>
+    <p class="text-muted" id="respondErrorMessage"></p>
+    <button class="btn btn-outline-primary mt-2" type="button" onclick="location.reload()">Tentar novamente</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ csp_nonce() }}">
+(function () {
+  const FORM_ID = {{ form_id|tojson }};
+  const PREFILL_NUMBER = {{ prefill_number|tojson }};
+  const PREFILL_NAME = {{ prefill_name|tojson }};
+  const $ = (id) => document.getElementById(id);
+  const numberInput = $('respNumber');
+  const nameInput = $('respName');
+  const ratingLabels = {
+    rating_4: ['Insuficiente', 'Suficiente', 'Bom', 'Excelente'],
+    rating_5: ['Discordo Completamente', 'Discordo', 'Neutro', 'Concordo', 'Concordo Completamente'],
+    rating: ['1', '2', '3', '4', '5']
+  };
+
+  const cleanUrl = new URL(window.location.href);
+  cleanUrl.searchParams.delete('number');
+  cleanUrl.searchParams.delete('name');
+  history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search);
+
+  function show(id) {
+    ['respondLoading', 'respondContent', 'respondSuccess', 'respondError']
+      .forEach((elementId) => $(elementId).classList.toggle('d-none', elementId !== id));
+  }
+
+  function showError(message) {
+    $('respondErrorMessage').textContent = message;
+    show('respondError');
+  }
+
+  function element(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function buildRating(field) {
+    const row = element('div', 'rating-group');
+    ratingLabels[field.type].forEach((labelText, index) => {
+      const value = index + 1;
+      const item = element('div', 'form-check');
+      const input = element('input', 'form-check-input rating-input');
+      input.type = 'radio';
+      input.name = 'f' + field.id;
+      input.value = value;
+      input.id = 'f' + field.id + '_' + value;
+      if (field.required) input.required = true;
+      const label = element('label', 'form-check-label rating-' + value, value);
+      label.htmlFor = input.id;
+      item.append(input, label);
+      row.appendChild(item);
+    });
+    const legend = field.type === 'rating_4'
+      ? '1-Inuficiente · 2-Suficiente · 3-Bom · 4-Excelente'
+      : '1-Discordo Completamente · 2-Discordo · 3-Neutro · 4-Concordo · 5-Concordo Completamente';
+    return [row, element('div', 'rating-legend-line', legend)];
+  }
+
+  function buildField(field) {
+    const wrapper = element('div', 'mb-3');
+    wrapper.dataset.fieldId = field.id;
+    const label = element('label', 'form-label small fw-semibold', field.label);
+    if (field.required) label.appendChild(element('span', 'text-danger', ' *'));
+    wrapper.appendChild(label);
+    if (field.help_text) wrapper.appendChild(element('div', 'form-text mb-2', field.help_text));
+
+    const name = 'f' + field.id;
+    if (field.type in ratingLabels) {
+      buildRating(field).forEach((node) => wrapper.appendChild(node));
+    } else if (field.type === 'single_choice' || field.type === 'multiple_choice') {
+      field.options.forEach((option) => {
+        const item = element('div', 'form-check');
+        const input = element('input', 'form-check-input');
+        input.type = field.type === 'single_choice' ? 'radio' : 'checkbox';
+        input.name = name;
+        input.value = option.id;
+        input.id = name + '_' + option.id;
+        const optionLabel = element('label', 'form-check-label', option.label);
+        optionLabel.htmlFor = input.id;
+        item.append(input, optionLabel);
+        wrapper.appendChild(item);
+      });
+    } else if (field.type === 'dropdown') {
+      const select = element('select', 'form-select form-select-sm');
+      select.name = name;
+      select.appendChild(new Option('— Escolher —', ''));
+      field.options.forEach((option) => select.appendChild(new Option(option.label, option.id)));
+      wrapper.appendChild(select);
+    } else {
+      const input = field.type === 'textarea'
+        ? element('textarea', 'form-control form-control-sm')
+        : element('input', 'form-control form-control-sm');
+      input.name = name;
+      if (field.type === 'textarea') input.rows = 2;
+      else input.type = { number: 'number', date: 'date', email: 'email' }[field.type] || 'text';
+      if (field.required) input.required = true;
+      wrapper.appendChild(input);
+    }
+    return wrapper;
+  }
+
+  function readValue(field) {
+    const name = 'f' + field.id;
+    if (field.type === 'multiple_choice') {
+      return [...document.querySelectorAll('input[name="' + name + '"]:checked')]
+        .map((input) => Number(input.value));
+    }
+    if (field.type === 'single_choice' || field.type in ratingLabels) {
+      const checked = document.querySelector('input[name="' + name + '"]:checked');
+      return checked ? Number(checked.value) : null;
+    }
+    const input = document.querySelector('[name="' + name + '"]');
+    if (!input) return null;
+    return field.type === 'dropdown' ? (input.value ? Number(input.value) : null) : input.value.trim();
+  }
+
+  let fields = [];
+
+  async function load() {
+    numberInput.value = PREFILL_NUMBER || '';
+    nameInput.value = PREFILL_NAME || '';
+    numberInput.readOnly = Boolean(PREFILL_NUMBER);
+    nameInput.readOnly = Boolean(PREFILL_NAME);
+    numberInput.classList.toggle('bg-light', Boolean(PREFILL_NUMBER));
+    nameInput.classList.toggle('bg-light', Boolean(PREFILL_NAME));
+    if (!FORM_ID) return showError('O link do questionário está incompleto.');
+
+    try {
+      const response = await fetch('/api/fill/' + FORM_ID);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) throw new Error(data.message || 'Questionário não disponível.');
+
+      fields = data.fields || [];
+      $('respondTitle').textContent = data.form.title;
+      $('respondSubtitle').textContent = data.form.description || '';
+      const container = $('respondSections');
+      let currentSection = null;
+      let sectionElement = null;
+
+      fields.forEach((field) => {
+        if (field.section !== currentSection) {
+          currentSection = field.section;
+          sectionElement = element('div', 'question-section');
+          sectionElement.appendChild(element('h6', '', currentSection || 'Questionário'));
+          container.appendChild(sectionElement);
+        }
+        sectionElement.appendChild(buildField(field));
+      });
+      show('respondContent');
+    } catch (error) {
+      showError(error.message || 'Erro ao carregar o questionário.');
+    }
+  }
+
+  $('respondForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const number = numberInput.value.trim();
+    const name = nameInput.value.trim();
+    if (!number || !name) return showError('O link não contém o número e o nome do formando.');
+
+    const answers = [];
+    for (const field of fields) {
+      const value = readValue(field);
+      const empty = value === null || value === '' || (Array.isArray(value) && value.length === 0);
+      if (field.required && empty) return showError('Preenche todas as perguntas obrigatórias.');
+      answers.push({ field_id: field.id, value });
+    }
+
+    const button = $('respondSubmitBtn');
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>A submeter...';
+    try {
+      const response = await fetch('/api/fill/' + FORM_ID, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number, name, answers })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) throw new Error(data.message || 'Erro ao submeter.');
+      show('respondSuccess');
+    } catch (error) {
+      showError(error.message || 'Erro ao submeter.');
+      button.disabled = false;
+      button.innerHTML = '<i class="far fa-paper-plane me-1"></i>Submeter';
+    }
+  });
+
+  load();
+})();
+</script>
+{% endblock %}

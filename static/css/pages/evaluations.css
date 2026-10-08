@@ -1,0 +1,84 @@
+.question-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.question-section h6 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0b2239;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #0b2239;
+}
+
+.rating-group {
+  display: flex;
+  gap: 4px;
+}
+
+.rating-group .form-check {
+  padding-left: 0;
+  margin: 0;
+}
+
+.rating-group .form-check-input {
+  display: none;
+}
+
+.rating-group .form-check-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  background: #fff;
+  transition: all 0.15s;
+}
+
+.rating-group .form-check-label:hover {
+  transform: scale(1.1);
+  z-index: 1;
+}
+
+.rating-group .form-check-input:checked + .form-check-label {
+  color: #fff;
+  transform: scale(1.1);
+  border-width: 2px;
+}
+
+.rating-legend-line {
+  font-size: 0.7rem;
+  color: #6b7280;
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+
+.rating-group .rating-1 { border-color: #fecaca; color: #dc2626; }
+.rating-group .rating-1:hover { background: #fee2e2; border-color: #dc2626; }
+.rating-group .form-check-input:checked + .rating-1 { background: #dc2626; border-color: #dc2626; }
+
+.rating-group .rating-2 { border-color: #fde68a; color: #d97706; }
+.rating-group .rating-2:hover { background: #fef3c7; border-color: #d97706; }
+.rating-group .form-check-input:checked + .rating-2 { background: #d97706; border-color: #d97706; }
+
+.rating-group .rating-3 { border-color: #a7f3d0; color: #059669; }
+.rating-group .rating-3:hover { background: #d1fae5; border-color: #059669; }
+.rating-group .form-check-input:checked + .rating-3 { background: #059669; border-color: #059669; }
+
+.rating-group .rating-4 { border-color: #6ee7b7; color: #047857; }
+.rating-group .rating-4:hover { background: #a7f3d0; border-color: #047857; }
+.rating-group .form-check-input:checked + .rating-4 { background: #047857; border-color: #047857; }
+
+.rating-group .rating-5 { border-color: #34d399; color: #065f46; }
+.rating-group .rating-5:hover { background: #6ee7b7; border-color: #065f46; }
+.rating-group .form-check-input:checked + .rating-5 { background: #065f46; border-color: #065f46; }

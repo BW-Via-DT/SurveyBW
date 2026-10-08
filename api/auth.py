@@ -206,6 +206,23 @@ def _redirect_to_mfa_flow(local_id, op_number, name, email, is_admin, mfa_enable
     Decide se vai para challenge MFA ou enrollment QR Code.
     """
 
+    if not current_app.config.get('MFA_ENABLED', False):
+        _set_session(local_id, op_number, name, is_admin, email)
+        log_login(
+            operator_number=op_number,
+            local_user_id=local_id,
+            success=True,
+            failure_reason='mfa_disabled'
+        )
+
+        if is_xhr:
+            return jsonify({
+                'success': True,
+                'redirect': url_for('surveys_routes.surveys_page')
+            })
+
+        return redirect(url_for('surveys_routes.surveys_page'))
+
     if mfa_enabled and mfa_secret:
         session.clear()
         session['mfa_pending_user_id'] = local_id
