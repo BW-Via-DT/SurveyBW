@@ -68,6 +68,7 @@
   const $ = (id) => document.getElementById(id);
   const numberInput = $('respNumber');
   const nameInput = $('respName');
+  const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
   const ratingLabels = {
     rating_4: ['Insuficiente', 'Suficiente', 'Bom', 'Excelente'],
     rating_5: ['Discordo Completamente', 'Discordo', 'Neutro', 'Concordo', 'Concordo Completamente'],
@@ -234,7 +235,10 @@
     try {
       const response = await fetch('/api/fill/' + FORM_ID, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
         body: JSON.stringify({ number, name, answers })
       });
       const data = await response.json().catch(() => ({}));
