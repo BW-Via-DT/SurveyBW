@@ -10,6 +10,7 @@ from flask import (Blueprint, current_app, flash, jsonify, redirect,
 
 from extensions import limiter
 from utils.call_conn import get_db_connection
+from utils.call_conn import connect
 from utils.auth_utils import get_operator_from_app_accounts
 
 auth_api = Blueprint("auth", __name__)
