@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import secrets
+import os
 from datetime import datetime
 from functools import wraps
 
@@ -46,6 +47,20 @@ def login_required(view):
             if request.path.startswith('/api/'):
                 return jsonify({'success': False, 'message': 'Not authenticated'}), 401
             return redirect(url_for('index'))
+        return view(*args, **kwargs)
+    return wrapped
+
+def api_key_required(view):
+    """Acesso por chave no header X-API-Key (para apps, sem login)."""
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        expected = os.environ.get('SECRET_KEY', '')
+        provided = request.headers.get('X-API-Key', '')
+
+        # Se a variável não estiver definida, bloqueia tudo
+        if not expected or not secrets.compare_digest(provided, expected):
+            logger.warning("Acesso negado à exportação (ip=%s)", _client_ip())
+            return jsonify({'success': False, 'message': 'Not authorized'}), 401
         return view(*args, **kwargs)
     return wrapped
 
@@ -884,6 +899,118 @@ def public_response_page(token):
             'surveys/link_invalid.html',
             show_app_shell=False,
         ), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@surveys_api.route('/api/export/responses', methods=['GET'])
+@api_key_required          
+@limiter.limit("60 per hour")
+def api_export_responses():
+    """
+    Parâmetros opcionais:
+      form_id -> só desse formulário
+      since   -> desde (ex: 2026-09-01)
+      until   -> até   (ex: 2026-09-30)
+      limit   -> máx. respostas por pedido (default 100, máx. 1000)
+      offset  -> paginação
+    """
+    form_id = request.args.get('form_id', type=int)
+    limit = min(max(request.args.get('limit', 100, type=int), 1), 1000)
+    offset = max(request.args.get('offset', 0, type=int), 0)
+
+    try:
+        since = datetime.fromisoformat(request.args['since']) if request.args.get('since') else None
+        until = datetime.fromisoformat(request.args['until']) if request.args.get('until') else None
+    except ValueError:
+        return jsonify({'success': False, 'message': 'Data inválida. Usa o formato AAAA-MM-DD.'}), 400
+
+    where, params = [], []
+    if form_id:
+        where.append("r.FormId = %s")
+        params.append(form_id)
+    if since:
+        where.append("r.SubmittedAt >= %s")
+        params.append(since)
+    if until:
+        where.append("r.SubmittedAt <= %s")
+        params.append(until)
+    where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+
+    conn = connect()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(f"SELECT COUNT(*) FROM public.FormResponses r {where_sql}", params)
+        total = cursor.fetchone()[0]
+
+        cursor.execute(f"""
+            WITH page AS (
+                SELECT r.Id
+                FROM public.FormResponses r
+                {where_sql}
+                ORDER BY r.SubmittedAt DESC, r.Id DESC
+                LIMIT %s OFFSET %s
+            )
+            SELECT r.Id, r.FormId, f.Title, f.IsAnonymous, r.RespondentEmail, r.SubmittedAt,
+                   ff.Id, ff.Label, ff.FieldType, a.AnswerText, o.OptionLabel
+            FROM page p
+            JOIN public.FormResponses r ON r.Id = p.Id
+            JOIN public.Forms f ON f.Id = r.FormId
+            LEFT JOIN public.FormResponseAnswers a ON a.ResponseId = r.Id
+            LEFT JOIN public.FormFields ff ON ff.Id = a.FieldId
+            LEFT JOIN public.FormResponseAnswerOptions ao ON ao.ResponseAnswerId = a.Id
+            LEFT JOIN public.FormFieldOptions o ON o.Id = ao.OptionId
+            ORDER BY r.SubmittedAt DESC, r.Id DESC, ff.FieldOrder, o.OptionOrder
+        """, params + [limit, offset])
+
+        responses = {}
+        for (resp_id, f_id, f_title, is_anon, email, submitted,
+             field_id, label, ftype, answer_text, option_label) in cursor.fetchall():
+
+            resp = responses.setdefault(resp_id, {
+                'response_id': resp_id,
+                'form_id': f_id,
+                'form_title': f_title,
+                'respondent': None if is_anon else email,  
+                'submitted_at': submitted.isoformat() if submitted else None,
+                '_answers': {},
+            })
+
+            if field_id is None:
+                continue
+
+            ans = resp['_answers'].setdefault(field_id, {
+                'field_id': field_id,
+                'label': label,
+                'type': ftype,
+                'text': answer_text or '',
+                'options': [],
+            })
+            if option_label:
+                ans['options'].append(option_label)
+
+        result = []
+        for resp in responses.values():
+            answers = resp.pop('_answers')
+            resp['answers'] = [{
+                'field_id': a['field_id'],
+                'label': a['label'],
+                'type': a['type'],
+                'value': ', '.join(a['options']) if a['options'] else a['text'],
+            } for a in answers.values()]
+            result.append(resp)
+
+        return jsonify({
+            'success': True,
+            'total': total,
+            'limit': limit,
+            'offset': offset,
+            'count': len(result),
+            'responses': result,
+        })
+    except Exception:
+        logger.exception("Erro na exportação de respostas")
+        return jsonify({'success': False, 'message': 'Erro ao exportar respostas.'}), 500
     finally:
         cursor.close()
         conn.close()
