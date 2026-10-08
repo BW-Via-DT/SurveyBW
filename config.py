@@ -60,6 +60,7 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+    MFA_ENABLED = False
 
 
 def get_config():
