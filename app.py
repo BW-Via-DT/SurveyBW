@@ -13,11 +13,13 @@ from extensions import limiter, csrf, talisman
 
 # O Render define RENDER=true automaticamente. Em local não existe.
 ON_RENDER = bool(os.environ.get('RENDER'))
+ON_VERCEL = bool(os.environ.get('VERCEL'))
+BEHIND_PROXY = ON_RENDER or ON_VERCEL
 
 app = create_app()
 app.config.from_object(get_config())
 
-if ON_RENDER:
+if BEHIND_PROXY:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 mail = Mail(app)
@@ -59,7 +61,7 @@ def configure_logging():
     root_logger.addHandler(console_handler)
 
     # Ficheiro só em local: no Render o disco é efémero.
-    if not ON_RENDER:
+    if not BEHIND_PROXY:
         file_handler = logging.handlers.RotatingFileHandler(
             'app.log', maxBytes=10 * 1024 * 1024, backupCount=5
         )

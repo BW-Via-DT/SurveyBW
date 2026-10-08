@@ -24,11 +24,6 @@ USER_COLUMNS = """Id, OperatorNumber, PasswordHash, Name, Email, isAdmin,
                    FailedAttempts, LockedUntil, MFAEnabled, MFASecret"""
 
 
-def connect():
-    # get_db_connection() devolve um dict com host, port, dbname, user, password
-    return psycopg2.connect(get_db_connection())
-
-
 def _post_login_redirect():
     return redirect(url_for('surveys_routes.surveys_page'))
 
