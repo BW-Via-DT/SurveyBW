@@ -76,6 +76,21 @@
   }
   .btn-sv-primary:hover { background: #0B7E75; border-color: #0B7E75; color: #fff; }
 
+  .btn-sv-secondary {
+    background: #fff;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-weight: 600;
+    font-size: 0.86rem;
+    border-radius: 8px;
+    padding: 0.58rem 0.95rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .btn-sv-secondary:hover { background: #F2F4F7; color: var(--ink); }
+
   .sv-card {
     background: #fff;
     border: 1px solid var(--line);
@@ -169,9 +184,14 @@
       <p>Cria, edita e acompanha as respostas dos teus formulários.</p>
       </div>
     </div>
-    <button id="btnNovoFormulario" class="btn-sv-primary">
-      <i class="fas fa-plus"></i> Novo Formulário
-    </button>
+    <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+      <a id="btnResponderAcademia" href="{{ url_for('surveys_fill.respond_page', form=2, Assignment_ID=1, academia='Academia', number='150339', name='Ruben Morais', api_key=config['SECRET_KEY']) }}" class="btn-sv-secondary" target="_blank" rel="opener">
+        <i class="fas fa-graduation-cap"></i> Responder Academia
+      </a>
+      <button id="btnNovoFormulario" class="btn-sv-primary">
+        <i class="fas fa-plus"></i> Novo Formulário
+      </button>
+    </div>
   </div>
 
   <div class="sv-card">
@@ -449,7 +469,6 @@
       e.preventDefault();
 
       const payload = {
-        invited_emails: document.getElementById('shareEmail').value.trim() || null,
         max_responses: document.getElementById('shareMaxResponses').value || null,
         expires_at: document.getElementById('shareExpiresAt').value || null,
       };
@@ -489,6 +508,11 @@
     });
     document.getElementById('btnNovoFormularioEmpty').addEventListener('click', function () {
       window.location.href = '/surveys/new';
+    });
+
+    document.getElementById('btnResponderAcademia').addEventListener('click', function (event) {
+      event.preventDefault();
+      window.open(this.href, '_blank');
     });
 
     loadForms();

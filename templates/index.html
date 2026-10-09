@@ -420,6 +420,7 @@
 
                     fetch('/set_initial_password', {
                         method: 'POST',
+                        credentials: 'same-origin',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRFToken': CSRF_TOKEN
@@ -564,6 +565,7 @@
 
                         fetch('/check_username', {
                             method: 'POST',
+                            credentials: 'same-origin',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'X-CSRFToken': CSRF_TOKEN
@@ -615,6 +617,7 @@
 
                     fetch('/login', {
                         method: 'POST',
+                        credentials: 'same-origin',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
                             'X-Requested-With': 'XMLHttpRequest',
