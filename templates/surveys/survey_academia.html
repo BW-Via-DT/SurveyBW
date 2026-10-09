@@ -22,7 +22,7 @@
       </a>
     </div>
 
-    <form id="respondForm">
+    <form id="respondForm" novalidate>
       <div class="row g-3 mb-4">
         <div class="col-md-4">
           <label for="respNumber" class="form-label fw-semibold">Número</label>
@@ -34,6 +34,7 @@
         </div>
       </div>
       <div id="respondSections"></div>
+      <div id="respondFormError" class="alert alert-danger py-2 small d-none" role="alert"></div>
       <div class="mt-4 d-flex gap-2 justify-content-end">
         <a href="{{ url_for('surveys_routes.surveys_page') }}" class="btn btn-outline-secondary">Cancelar</a>
         <button type="submit" class="btn btn-primary px-4" id="respondSubmitBtn">
@@ -44,10 +45,11 @@
   </div>
 
   <div id="respondSuccess" class="d-none text-center py-5">
-    <i class="far fa-check-circle text-success fs-1 mb-3 d-block"></i>
-    <h5>Questionário submetido com sucesso!</h5>
-    <p class="text-muted">Obrigado pela sua participação.</p>
-    <a href="{{ url_for('surveys_routes.surveys_page') }}" class="btn btn-primary mt-2">Voltar aos Formulários</a>
+    <div class="submit-success-icon" aria-hidden="true">
+      <i class="fas fa-check"></i>
+    </div>
+    <h5>Questionário preenchido!</h5>
+    <p class="text-muted">Obrigado pela sua participação. Esta janela irá fechar automaticamente.</p>
   </div>
 
   <div id="respondError" class="d-none text-center py-5">
@@ -64,7 +66,7 @@
 (function () {
   const initialContext = {
     formId: {{ form_id|tojson }},
-    scheduleId: {{ schedule_id|tojson }},
+    assignmentId: {{ assignment_id|tojson }},
     academia: {{ academia|tojson }},
     number: {{ prefill_number|tojson }},
     name: {{ prefill_name|tojson }},
@@ -78,7 +80,7 @@
   }
   const context = initialContext.formId !== null ? initialContext : storedContext;
   const FORM_ID = context.formId;
-  const SCHEDULE_ID = context.scheduleId || '';
+  const ASSIGNMENT_ID = context.assignmentId || '';
   const ACADEMIA = context.academia || '';
   const PREFILL_NUMBER = context.number || '';
   const PREFILL_NAME = context.name || '';
@@ -103,7 +105,19 @@
       .forEach((elementId) => $(elementId).classList.toggle('d-none', elementId !== id));
   }
 
-  function showError(message) {
+  function showError(message, targetElement = null) {
+    const errorElement = $('respondFormError');
+    errorElement.textContent = message;
+    errorElement.classList.remove('d-none');
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetElement.querySelector('input, select, textarea')?.focus({ preventScroll: true });
+    } else {
+      errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function showPageError(message) {
     $('respondErrorMessage').textContent = message;
     show('respondError');
   }
@@ -204,7 +218,7 @@
     nameInput.readOnly = Boolean(PREFILL_NAME);
     numberInput.classList.toggle('bg-light', Boolean(PREFILL_NUMBER));
     nameInput.classList.toggle('bg-light', Boolean(PREFILL_NAME));
-    if (!FORM_ID) return showError('O link do questionário está incompleto.');
+    if (!FORM_ID) return showPageError('O link do questionário está incompleto.');
 
     try {
       const response = await fetch('/api/fill/' + FORM_ID, {
@@ -231,22 +245,35 @@
       });
       show('respondContent');
     } catch (error) {
-      showError(error.message || 'Erro ao carregar o questionário.');
+      showPageError(error.message || 'Erro ao carregar o questionário.');
     }
   }
 
   $('respondForm').addEventListener('submit', async (event) => {
     event.preventDefault();
+    $('respondFormError').classList.add('d-none');
+    document.querySelectorAll('.question-missing').forEach((element) => {
+      element.classList.remove('question-missing');
+    });
     const number = numberInput.value.trim();
     const name = nameInput.value.trim();
-    if (!number || !name) return showError('O link não contém o número e o nome do formando.');
-    if (!SCHEDULE_ID || !ACADEMIA) return showError('O link não contém a formação associada.');
+    if (!number) return showError('Preenche o número.', numberInput);
+    if (!name) return showError('Preenche o nome.', nameInput);
+    if (!ASSIGNMENT_ID || !ACADEMIA) return showError('O link não contém a formação associada.');
 
     const answers = [];
     for (const field of fields) {
       const value = readValue(field);
       const empty = value === null || value === '' || (Array.isArray(value) && value.length === 0);
-      if (field.required && empty) return showError('Preenche todas as perguntas obrigatórias.');
+      if (field.required && empty) {
+        const fieldElement = document.querySelector('[data-field-id="' + field.id + '"]');
+        if (fieldElement) {
+          fieldElement.classList.add('question-missing');
+          fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          fieldElement.querySelector('input, select, textarea')?.focus({ preventScroll: true });
+        }
+        return;
+      }
       answers.push({ field_id: field.id, value });
     }
 
@@ -264,7 +291,7 @@
         body: JSON.stringify({
           number,
           name,
-          schedule_id: SCHEDULE_ID,
+          assignment_id: ASSIGNMENT_ID,
           academia: ACADEMIA,
           answers
         })
@@ -273,6 +300,11 @@
       if (!response.ok || !data.success) throw new Error(data.message || 'Erro ao submeter.');
       sessionStorage.removeItem('survey_response_context');
       show('respondSuccess');
+      setTimeout(() => {
+        window.open('', '_self');
+        window.close();
+        setTimeout(() => window.close(), 150);
+      }, 1800);
     } catch (error) {
       showError(error.message || 'Erro ao submeter.');
       button.disabled = false;

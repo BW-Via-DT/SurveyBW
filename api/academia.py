@@ -6,7 +6,7 @@ from functools import wraps
 
 from flask import Blueprint, jsonify, render_template, request
 
-from extensions import limiter
+from extensions import limiter, csrf
 from utils.call_conn import connect
 
 surveys_fill = Blueprint("surveys_fill", __name__)
@@ -79,7 +79,7 @@ def _load_form(cursor, form_id):
 @api_key_required(page=True)
 def respond_page():
     form_id = request.args.get('form', type=int)
-    schedule_id = (request.args.get('Schedule_ID') or request.args.get('schedule_id') or '').strip()[:100]
+    assignment_id = (request.args.get('Assignment_ID') or request.args.get('assignment_id') or '').strip()[:100]
     academia = (request.args.get('academia') or '').strip()[:200]
     number = (request.args.get('number') or '').strip()[:50]
     name = (request.args.get('name') or '').strip()[:200]
@@ -88,7 +88,7 @@ def respond_page():
     return render_template(
         'surveys/survey_academia.html',
         form_id=form_id,
-        schedule_id=schedule_id,
+        assignment_id=assignment_id,
         academia=academia,
         prefill_number=number,
         prefill_name=name,
@@ -129,7 +129,7 @@ def api_submit_form(form_id):
 
     number = str(data.get('number') or '').strip()
     name = str(data.get('name') or '').strip()
-    schedule_id = str(data.get('schedule_id') or '').strip()
+    assignment_id = str(data.get('assignment_id') or '').strip()
     academia = str(data.get('academia') or '').strip()
     answers = data.get('answers')
 
@@ -137,8 +137,8 @@ def api_submit_form(form_id):
         return jsonify({'success': False, 'message': 'Número inválido.'}), 400
     if not name or len(name) > 200:
         return jsonify({'success': False, 'message': 'Nome inválido.'}), 400
-    if not schedule_id or len(schedule_id) > 100:
-        return jsonify({'success': False, 'message': 'Schedule_ID inválido.'}), 400
+    if not assignment_id or len(assignment_id) > 100:
+        return jsonify({'success': False, 'message': 'Assignment_ID inválido.'}), 400
     if not academia or len(academia) > 200:
         return jsonify({'success': False, 'message': 'Academia inválida.'}), 400
     if not isinstance(answers, list):
@@ -196,11 +196,11 @@ def api_submit_form(form_id):
         # Gravação
         cursor.execute("""
             INSERT INTO public.formresponses
-                                (formid, scheduleid, academia, respondentnumber, respondentname,
+                                (formid, assignmentid, academia, respondentnumber, respondentname,
                                  ipaddress, useragent, submittedat)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
-          """, (form_id, schedule_id, academia, number, name, _client_ip(),
+          """, (form_id, assignment_id, academia, number, name, _client_ip(),
               request.headers.get('User-Agent', '')[:500], datetime.utcnow()))
         response_id = cursor.fetchone()[0]
 
@@ -235,88 +235,66 @@ def api_submit_form(form_id):
 
 
 # ============================================================
-# API — OBTER AS RESPOSTAS
-#   /api/fill/responses?form_id=1&since=2026-09-01&until=2026-09-30&limit=100&offset=0
+# API — SYNC: respostas ainda não sincronizadas
+#   GET /api/fill/responses/pending?limit=100
 #   Header: X-API-Key
 # ============================================================
-@surveys_fill.route('/api/fill/responses', methods=['GET'])
+@surveys_fill.route('/api/fill/responses/pending', methods=['GET'])
 @api_key_required
-@limiter.limit("60 per hour")
-def api_export_responses():
-    form_id = request.args.get('form_id', type=int)
-    number = (request.args.get('number') or '').strip() or None
-    limit = min(max(request.args.get('limit', 100, type=int), 1), 1000)
-    offset = max(request.args.get('offset', 0, type=int), 0)
-
-    try:
-        since = datetime.fromisoformat(request.args['since']) if request.args.get('since') else None
-        until = datetime.fromisoformat(request.args['until']) if request.args.get('until') else None
-    except ValueError:
-        return jsonify({'success': False, 'message': 'Data inválida. Usa o formato AAAA-MM-DD.'}), 400
-
-    where, params = [], []
-    if form_id:
-        where.append("r.formid = %s")
-        params.append(form_id)
-    if number:
-        where.append("r.respondentnumber = %s")
-        params.append(number)
-    if since:
-        where.append("r.submittedat >= %s")
-        params.append(since)
-    if until:
-        where.append("r.submittedat <= %s")
-        params.append(until)
-    where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+@limiter.limit("600 per hour")
+def api_pending_responses():
+    limit = min(max(request.args.get('limit', 100, type=int), 1), 500)
 
     conn = connect()
     cursor = conn.cursor()
     try:
-        cursor.execute(f"SELECT COUNT(*) FROM public.formresponses r {where_sql}", params)
-        total = cursor.fetchone()[0]
+        cursor.execute("""
+            SELECT id FROM public.formresponses
+            WHERE syncedat IS NULL
+            ORDER BY id
+            LIMIT %s
+        """, (limit,))
+        ids = [r[0] for r in cursor.fetchall()]
+        if not ids:
+            return jsonify({'success': True, 'count': 0, 'responses': []})
 
-        cursor.execute(f"""
-            WITH page AS (
-                SELECT r.id
-                FROM public.formresponses r
-                {where_sql}
-                ORDER BY r.submittedat DESC, r.id DESC
-                LIMIT %s OFFSET %s
-            )
-                 SELECT r.id, r.formid, f.title, r.scheduleid, r.academia,
-                     r.respondentnumber, r.respondentname, r.submittedat,
-                   ff.id, ff.section, ff.label, ff.fieldtype, a.answertext, o.optionlabel
-            FROM page p
-            JOIN public.formresponses r ON r.id = p.id
+        cursor.execute("""
+            SELECT r.id, r.formid, f.title, r.assignmentid, r.academia,
+                   r.respondentnumber, r.respondentname, r.submittedat,
+                   ff.id, ff.fieldorder, ff.section, ff.label, ff.fieldtype,
+                   a.answertext, o.optionlabel
+            FROM public.formresponses r
             JOIN public.forms f ON f.id = r.formid
             LEFT JOIN public.formresponseanswers a ON a.responseid = r.id
             LEFT JOIN public.formfields ff ON ff.id = a.fieldid
             LEFT JOIN public.formresponseansweroptions ao ON ao.responseanswerid = a.id
             LEFT JOIN public.formfieldoptions o ON o.id = ao.optionid
-            ORDER BY r.submittedat DESC, r.id DESC, ff.fieldorder, o.optionorder
-        """, params + [limit, offset])
+            WHERE r.id = ANY(%s)
+            ORDER BY r.id, ff.fieldorder, o.optionorder
+        """, (ids,))
 
         responses = {}
-        for (resp_id, f_id, f_title, schedule_id, academia, r_number, r_name, submitted,
-             field_id, section, label, ftype, answer_text, option_label) in cursor.fetchall():
+        for (resp_id, form_id, form_title, assignment_id, academia, number, name,
+             submitted, field_id, field_order, section, label, ftype,
+             answer_text, option_label) in cursor.fetchall():
 
             resp = responses.setdefault(resp_id, {
                 'response_id': resp_id,
-                'form_id': f_id,
-                'form_title': f_title,
-                'schedule_id': schedule_id,
+                'form_id': form_id,
+                'form_title': form_title,
+                'assignment_id': assignment_id,
                 'academia': academia,
-                'number': r_number,
-                'name': r_name,
+                'number': number,
+                'name': name,
                 'submitted_at': submitted.isoformat() if submitted else None,
                 '_answers': {},
             })
             if field_id is None:
                 continue
-
             ans = resp['_answers'].setdefault(field_id, {
-                'field_id': field_id, 'section': section, 'label': label,
-                'type': ftype, 'text': answer_text or '', 'options': [],
+                'field_id': field_id, 'field_order': field_order,
+                'section': section, 'label': label, 'type': ftype,
+                'text': answer_text or '', 'options': [],
             })
             if option_label:
                 ans['options'].append(option_label)
@@ -326,6 +304,7 @@ def api_export_responses():
             answers = resp.pop('_answers')
             resp['answers'] = [{
                 'field_id': a['field_id'],
+                'field_order': a['field_order'],
                 'section': a['section'],
                 'label': a['label'],
                 'type': a['type'],
@@ -333,13 +312,48 @@ def api_export_responses():
             } for a in answers.values()]
             result.append(resp)
 
-        return jsonify({
-            'success': True, 'total': total, 'limit': limit,
-            'offset': offset, 'count': len(result), 'responses': result,
-        })
+        return jsonify({'success': True, 'count': len(result), 'responses': result})
     except Exception:
-        logger.exception("Erro na exportação de respostas")
-        return jsonify({'success': False, 'message': 'Erro ao exportar respostas.'}), 500
+        logger.exception("Erro ao obter respostas pendentes")
+        return jsonify({'success': False, 'message': 'Erro ao obter respostas.'}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ============================================================
+# API — SYNC: confirmar que já foram gravadas internamente
+#   POST /api/fill/responses/ack   {"ids": [12, 13, 14]}
+# ============================================================
+@surveys_fill.route('/api/fill/responses/ack', methods=['POST'])
+@csrf.exempt
+@api_key_required
+@limiter.limit("600 per hour")
+def api_ack_responses():
+    data = request.get_json(silent=True) or {}
+    ids = data.get('ids')
+    if not isinstance(ids, list) or not ids or len(ids) > 1000:
+        return jsonify({'success': False, 'message': 'Lista de ids inválida.'}), 400
+    try:
+        ids = [int(i) for i in ids]
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': 'Lista de ids inválida.'}), 400
+
+    conn = connect()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            UPDATE public.formresponses
+            SET syncedat = (now() AT TIME ZONE 'utc')
+            WHERE id = ANY(%s) AND syncedat IS NULL
+        """, (ids,))
+        updated = cursor.rowcount
+        conn.commit()
+        return jsonify({'success': True, 'updated': updated})
+    except Exception:
+        conn.rollback()
+        logger.exception("Erro ao confirmar sincronização")
+        return jsonify({'success': False, 'message': 'Erro ao confirmar.'}), 500
     finally:
         cursor.close()
         conn.close()
