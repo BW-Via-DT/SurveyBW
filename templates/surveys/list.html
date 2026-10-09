@@ -207,9 +207,9 @@
           </div>
 
           <form id="shareForm">
-            <label style="font-size:0.85rem; font-weight:600; margin-bottom:0.4rem; display:block;">Enviar para emails (opcional)</label>
+            <!--<label style="font-size:0.85rem; font-weight:600; margin-bottom:0.4rem; display:block;">Enviar para emails (opcional)</label>
             <textarea id="shareEmail" rows="3" placeholder="Vários emails separados por vírgula ou linha. Vazio para um link geral." style="width:100%; border:1px solid var(--line); border-radius:6px; padding:0.5rem 0.7rem; font-size:0.9rem; margin-bottom:0.8rem; resize:vertical;"></textarea>
-
+            -->
             <div style="display:flex; gap:0.8rem;">
               <div style="flex:1;">
                 <label style="font-size:0.85rem; font-weight:600; margin-bottom:0.4rem; display:block;">Limite de respostas</label>
@@ -284,9 +284,6 @@
             <button class="sv-grid-action" data-action="responses" data-id="${params.data.id}" title="Ver respostas">
               <i class="fas fa-chart-bar"></i>
             </button>
-            <button class="sv-grid-action" data-action="academia" data-id="${params.data.id}" title="Gerar link de resposta">
-              <i class="fas fa-external-link-alt"></i>
-            </button>
             <button class="sv-grid-action danger" data-action="delete" data-id="${params.data.id}" data-nome="${params.data.nome}" title="Apagar">
               <i class="fas fa-trash"></i>
             </button>
@@ -314,17 +311,6 @@
           openShareModal(id, btn.dataset.nome);
         } else if (btn.dataset.action === 'responses') {
           window.location.href = `/surveys/${id}/responses`;
-        } else if (btn.dataset.action === 'academia') {
-          const responseUrl = new URL('/responder', window.location.origin);
-          responseUrl.searchParams.set('form', id);
-          responseUrl.searchParams.set('number', '150339');
-          responseUrl.searchParams.set('name', 'Ruben Morais');
-
-          navigator.clipboard.writeText(responseUrl.href)
-            .then(() => window.showToast('Link copiado.', 'success'))
-            .catch(() => window.showToast('Link gerado.', 'success'));
-
-          window.open(responseUrl.href, '_blank');
         }
       }
     };

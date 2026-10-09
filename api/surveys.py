@@ -18,7 +18,8 @@ logger = logging.getLogger("surveys")
 
 VALID_FIELD_TYPES = {
     'text', 'textarea', 'number', 'date', 'email',
-    'single_choice', 'multiple_choice', 'dropdown', 'rating'
+    'single_choice', 'multiple_choice', 'dropdown',
+    'rating', 'rating_4', 'rating_5'
 }
 CHOICE_FIELD_TYPES = {'single_choice', 'multiple_choice', 'dropdown'}
 VALID_STATUSES = {'draft', 'published', 'closed'}

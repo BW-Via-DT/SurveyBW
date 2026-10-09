@@ -21,14 +21,19 @@ def _client_ip():
     return ip_address.split(',')[0].strip()
 
 
-def api_key_required(view):
+def api_key_required(view=None, *, page=False):
     """Acesso por chave no header X-API-Key (para obter as respostas)."""
+    if view is None:
+        return lambda decorated_view: api_key_required(decorated_view, page=page)
+
     @wraps(view)
     def wrapped(*args, **kwargs):
         expected = os.environ.get('SECRET_KEY', '')
-        provided = request.headers.get('X-API-Key', '')
+        provided = request.headers.get('X-API-Key') or request.args.get('api_key', '')
         if not expected or not secrets.compare_digest(provided, expected):
             logger.warning("Acesso negado (ip=%s)", _client_ip())
+            if page:
+                return render_template('surveys/link_invalid.html'), 401
             return jsonify({'success': False, 'message': 'Not authorized'}), 401
         return view(*args, **kwargs)
     return wrapped
@@ -71,16 +76,23 @@ def _load_form(cursor, form_id):
 # PÁGINA  ->  /responder?form=1&number=150339&name=Ruben%20Morais
 # ============================================================
 @surveys_fill.route('/responder', methods=['GET'])
+@api_key_required(page=True)
 def respond_page():
     form_id = request.args.get('form', type=int)
+    schedule_id = (request.args.get('Schedule_ID') or request.args.get('schedule_id') or '').strip()[:100]
+    academia = (request.args.get('academia') or '').strip()[:200]
     number = (request.args.get('number') or '').strip()[:50]
     name = (request.args.get('name') or '').strip()[:200]
+    api_key = request.headers.get('X-API-Key') or request.args.get('api_key', '')
 
     return render_template(
         'surveys/survey_academia.html',
         form_id=form_id,
+        schedule_id=schedule_id,
+        academia=academia,
         prefill_number=number,
         prefill_name=name,
+        api_key=api_key,
         show_app_shell=False,
     )
 
@@ -89,6 +101,7 @@ def respond_page():
 # API — IR BUSCAR AS PERGUNTAS
 # ============================================================
 @surveys_fill.route('/api/fill/<int:form_id>', methods=['GET'])
+@api_key_required
 def api_get_form(form_id):
     conn = connect()
     cursor = conn.cursor()
@@ -109,18 +122,25 @@ def api_get_form(form_id):
 # API — RESPONDER
 # ============================================================
 @surveys_fill.route('/api/fill/<int:form_id>', methods=['POST'])
+@api_key_required
 @limiter.limit("60 per hour")
 def api_submit_form(form_id):
     data = request.get_json(silent=True) or {}
 
     number = str(data.get('number') or '').strip()
     name = str(data.get('name') or '').strip()
+    schedule_id = str(data.get('schedule_id') or '').strip()
+    academia = str(data.get('academia') or '').strip()
     answers = data.get('answers')
 
     if not number or len(number) > 50:
         return jsonify({'success': False, 'message': 'Número inválido.'}), 400
     if not name or len(name) > 200:
         return jsonify({'success': False, 'message': 'Nome inválido.'}), 400
+    if not schedule_id or len(schedule_id) > 100:
+        return jsonify({'success': False, 'message': 'Schedule_ID inválido.'}), 400
+    if not academia or len(academia) > 200:
+        return jsonify({'success': False, 'message': 'Academia inválida.'}), 400
     if not isinstance(answers, list):
         return jsonify({'success': False, 'message': 'Dados de resposta inválidos.'}), 400
 
@@ -176,10 +196,11 @@ def api_submit_form(form_id):
         # Gravação
         cursor.execute("""
             INSERT INTO public.formresponses
-                (formid, respondentnumber, respondentname, ipaddress, useragent, submittedat)
-            VALUES (%s, %s, %s, %s, %s, %s)
+                                (formid, scheduleid, academia, respondentnumber, respondentname,
+                                 ipaddress, useragent, submittedat)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
-        """, (form_id, number, name, _client_ip(),
+          """, (form_id, schedule_id, academia, number, name, _client_ip(),
               request.headers.get('User-Agent', '')[:500], datetime.utcnow()))
         response_id = cursor.fetchone()[0]
 
@@ -262,7 +283,8 @@ def api_export_responses():
                 ORDER BY r.submittedat DESC, r.id DESC
                 LIMIT %s OFFSET %s
             )
-            SELECT r.id, r.formid, f.title, r.respondentnumber, r.respondentname, r.submittedat,
+                 SELECT r.id, r.formid, f.title, r.scheduleid, r.academia,
+                     r.respondentnumber, r.respondentname, r.submittedat,
                    ff.id, ff.section, ff.label, ff.fieldtype, a.answertext, o.optionlabel
             FROM page p
             JOIN public.formresponses r ON r.id = p.id
@@ -275,13 +297,15 @@ def api_export_responses():
         """, params + [limit, offset])
 
         responses = {}
-        for (resp_id, f_id, f_title, r_number, r_name, submitted,
+        for (resp_id, f_id, f_title, schedule_id, academia, r_number, r_name, submitted,
              field_id, section, label, ftype, answer_text, option_label) in cursor.fetchall():
 
             resp = responses.setdefault(resp_id, {
                 'response_id': resp_id,
                 'form_id': f_id,
                 'form_title': f_title,
+                'schedule_id': schedule_id,
+                'academia': academia,
                 'number': r_number,
                 'name': r_name,
                 'submitted_at': submitted.isoformat() if submitted else None,

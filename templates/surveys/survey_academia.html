@@ -62,9 +62,27 @@
 {% block extra_js %}
 <script nonce="{{ csp_nonce() }}">
 (function () {
-  const FORM_ID = {{ form_id|tojson }};
-  const PREFILL_NUMBER = {{ prefill_number|tojson }};
-  const PREFILL_NAME = {{ prefill_name|tojson }};
+  const initialContext = {
+    formId: {{ form_id|tojson }},
+    scheduleId: {{ schedule_id|tojson }},
+    academia: {{ academia|tojson }},
+    number: {{ prefill_number|tojson }},
+    name: {{ prefill_name|tojson }},
+    apiKey: {{ api_key|tojson }}
+  };
+  let storedContext = {};
+  try {
+    storedContext = JSON.parse(sessionStorage.getItem('survey_response_context') || '{}');
+  } catch (error) {
+    storedContext = {};
+  }
+  const context = initialContext.formId !== null ? initialContext : storedContext;
+  const FORM_ID = context.formId;
+  const SCHEDULE_ID = context.scheduleId || '';
+  const ACADEMIA = context.academia || '';
+  const PREFILL_NUMBER = context.number || '';
+  const PREFILL_NAME = context.name || '';
+  const API_KEY = context.apiKey || '';
   const $ = (id) => document.getElementById(id);
   const numberInput = $('respNumber');
   const nameInput = $('respName');
@@ -75,10 +93,10 @@
     rating: ['1', '2', '3', '4', '5']
   };
 
-  const cleanUrl = new URL(window.location.href);
-  cleanUrl.searchParams.delete('number');
-  cleanUrl.searchParams.delete('name');
-  history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search);
+  if (initialContext.formId !== null) {
+    sessionStorage.setItem('survey_response_context', JSON.stringify(initialContext));
+  }
+  history.replaceState({}, document.title, window.location.pathname);
 
   function show(id) {
     ['respondLoading', 'respondContent', 'respondSuccess', 'respondError']
@@ -189,7 +207,9 @@
     if (!FORM_ID) return showError('O link do questionário está incompleto.');
 
     try {
-      const response = await fetch('/api/fill/' + FORM_ID);
+      const response = await fetch('/api/fill/' + FORM_ID, {
+        headers: { 'X-API-Key': API_KEY }
+      });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.success) throw new Error(data.message || 'Questionário não disponível.');
 
@@ -220,6 +240,7 @@
     const number = numberInput.value.trim();
     const name = nameInput.value.trim();
     if (!number || !name) return showError('O link não contém o número e o nome do formando.');
+    if (!SCHEDULE_ID || !ACADEMIA) return showError('O link não contém a formação associada.');
 
     const answers = [];
     for (const field of fields) {
@@ -237,12 +258,20 @@
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken
+          'X-CSRFToken': csrfToken,
+          'X-API-Key': API_KEY
         },
-        body: JSON.stringify({ number, name, answers })
+        body: JSON.stringify({
+          number,
+          name,
+          schedule_id: SCHEDULE_ID,
+          academia: ACADEMIA,
+          answers
+        })
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.success) throw new Error(data.message || 'Erro ao submeter.');
+      sessionStorage.removeItem('survey_response_context');
       show('respondSuccess');
     } catch (error) {
       showError(error.message || 'Erro ao submeter.');

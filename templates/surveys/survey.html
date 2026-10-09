@@ -376,7 +376,9 @@
             <div class="fb-palette-item" data-type="single_choice"><i class="far fa-dot-circle"></i> Escolha única</div>
             <div class="fb-palette-item" data-type="multiple_choice"><i class="far fa-check-square"></i> Escolha múltipla</div>
             <div class="fb-palette-item" data-type="dropdown"><i class="far fa-caret-square-down"></i> Lista pendente</div>
-            <div class="fb-palette-item" data-type="rating"><i class="far fa-star"></i> Classificação</div>
+            <div class="fb-palette-item" data-type="rating"><i class="far fa-star"></i> Classificação (5)</div>
+            <div class="fb-palette-item" data-type="rating_4"><i class="far fa-star"></i> Classificação (4)</div>
+            <div class="fb-palette-item" data-type="rating_5"><i class="far fa-star"></i> Classificação (5)</div>
         </div>
       </div>
     </div>
@@ -465,7 +467,8 @@
     const TYPE_LABELS = {
         text: 'Texto curto', textarea: 'Texto longo', number: 'Número', date: 'Data',
         email: 'Email', single_choice: 'Escolha única', multiple_choice: 'Escolha múltipla',
-        dropdown: 'Lista pendente', rating: 'Classificação'
+        dropdown: 'Lista pendente', rating: 'Classificação',
+        rating_4: 'Classificação (4)', rating_5: 'Classificação (5)'
     };
     const CHOICE_TYPES = ['single_choice', 'multiple_choice', 'dropdown'];
 
@@ -705,6 +708,9 @@
             inputHtml = '<input class="preview-input" type="email" value="" disabled />';
           } else if (field.type === 'dropdown') {
             inputHtml = `<select class="preview-select" disabled><option>Selecione uma opção</option>${(field.options || []).map(opt => `<option>${(opt.label || 'Opção sem texto').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`).join('')}</select>`;
+          } else if (field.type === 'rating' || field.type === 'rating_4' || field.type === 'rating_5') {
+            const maxRating = field.type === 'rating_4' ? 4 : 5;
+            inputHtml = `<div class="d-flex gap-2">${Array.from({ length: maxRating }, (_, i) => `<button type="button" class="btn btn-outline-secondary btn-sm" disabled>${i + 1}</button>`).join('')}</div>`;
           }
 
           return `
