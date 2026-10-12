@@ -67,7 +67,7 @@
   const initialContext = {
     formId: {{ form_id|tojson }},
     assignmentId: {{ assignment_id|tojson }},
-    academia: {{ academia|tojson }},
+    tipo: {{ tipo|tojson }},
     number: {{ prefill_number|tojson }},
     name: {{ prefill_name|tojson }},
     apiKey: {{ api_key|tojson }}
@@ -81,7 +81,7 @@
   const context = initialContext.formId !== null ? initialContext : storedContext;
   const FORM_ID = context.formId;
   const ASSIGNMENT_ID = context.assignmentId || '';
-  const ACADEMIA = context.academia || '';
+  const TIPO = context.tipo || '';
   const PREFILL_NUMBER = context.number || '';
   const PREFILL_NAME = context.name || '';
   const API_KEY = context.apiKey || '';
@@ -259,7 +259,7 @@
     const name = nameInput.value.trim();
     if (!number) return showError('Preenche o número.', numberInput);
     if (!name) return showError('Preenche o nome.', nameInput);
-    if (!ASSIGNMENT_ID || !ACADEMIA) return showError('O link não contém a formação associada.');
+    if (!ASSIGNMENT_ID || !TIPO) return showError('O link não contém a formação associada.');
 
     const answers = [];
     for (const field of fields) {
@@ -292,7 +292,7 @@
           number,
           name,
           assignment_id: ASSIGNMENT_ID,
-          academia: ACADEMIA,
+          tipo: TIPO,
           answers
         })
       });

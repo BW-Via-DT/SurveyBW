@@ -4,7 +4,7 @@ import psycopg2
 import psycopg2.extensions
 from dotenv import load_dotenv
 
-load_dotenv()  # em local lê o .env; no Render não faz nada
+load_dotenv()
 
 
 def get_db_connection():

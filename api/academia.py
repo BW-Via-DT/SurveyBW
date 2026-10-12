@@ -80,7 +80,7 @@ def _load_form(cursor, form_id):
 def respond_page():
     form_id = request.args.get('form', type=int)
     assignment_id = (request.args.get('Assignment_ID') or request.args.get('assignment_id') or '').strip()[:100]
-    academia = (request.args.get('academia') or '').strip()[:200]
+    tipo = (request.args.get('tipo') or '').strip()[:200]
     number = (request.args.get('number') or '').strip()[:50]
     name = (request.args.get('name') or '').strip()[:200]
     api_key = request.headers.get('X-API-Key') or request.args.get('api_key', '')
@@ -89,7 +89,7 @@ def respond_page():
         'surveys/survey_academia.html',
         form_id=form_id,
         assignment_id=assignment_id,
-        academia=academia,
+        tipo=tipo,
         prefill_number=number,
         prefill_name=name,
         api_key=api_key,
@@ -130,7 +130,7 @@ def api_submit_form(form_id):
     number = str(data.get('number') or '').strip()
     name = str(data.get('name') or '').strip()
     assignment_id = str(data.get('assignment_id') or '').strip()
-    academia = str(data.get('academia') or '').strip()
+    tipo = str(data.get('tipo') or '').strip()
     answers = data.get('answers')
 
     if not number or len(number) > 50:
@@ -139,8 +139,8 @@ def api_submit_form(form_id):
         return jsonify({'success': False, 'message': 'Nome inválido.'}), 400
     if not assignment_id or len(assignment_id) > 100:
         return jsonify({'success': False, 'message': 'Assignment_ID inválido.'}), 400
-    if not academia or len(academia) > 200:
-        return jsonify({'success': False, 'message': 'Academia inválida.'}), 400
+    if not tipo or len(tipo) > 200:
+        return jsonify({'success': False, 'message': 'Tipo inválido.'}), 400
     if not isinstance(answers, list):
         return jsonify({'success': False, 'message': 'Dados de resposta inválidos.'}), 400
 
@@ -196,11 +196,11 @@ def api_submit_form(form_id):
         # Gravação
         cursor.execute("""
             INSERT INTO public.formresponses
-                                (formid, assignmentid, academia, respondentnumber, respondentname,
+                                (formid, assignmentid, tipo, respondentnumber, respondentname,
                                  ipaddress, useragent, submittedat)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
-          """, (form_id, assignment_id, academia, number, name, _client_ip(),
+          """, (form_id, assignment_id, tipo, number, name, _client_ip(),
               request.headers.get('User-Agent', '')[:500], datetime.utcnow()))
         response_id = cursor.fetchone()[0]
 
@@ -259,7 +259,7 @@ def api_pending_responses():
             return jsonify({'success': True, 'count': 0, 'responses': []})
 
         cursor.execute("""
-            SELECT r.id, r.formid, f.title, r.assignmentid, r.academia,
+            SELECT r.id, r.formid, f.title, r.assignmentid, r.tipo,
                    r.respondentnumber, r.respondentname, r.submittedat,
                    ff.id, ff.fieldorder, ff.section, ff.label, ff.fieldtype,
                    a.answertext, o.optionlabel
@@ -274,7 +274,7 @@ def api_pending_responses():
         """, (ids,))
 
         responses = {}
-        for (resp_id, form_id, form_title, assignment_id, academia, number, name,
+        for (resp_id, form_id, form_title, assignment_id, tipo, number, name,
              submitted, field_id, field_order, section, label, ftype,
              answer_text, option_label) in cursor.fetchall():
 
@@ -283,7 +283,7 @@ def api_pending_responses():
                 'form_id': form_id,
                 'form_title': form_title,
                 'assignment_id': assignment_id,
-                'academia': academia,
+                'tipo': tipo,
                 'number': number,
                 'name': name,
                 'submitted_at': submitted.isoformat() if submitted else None,
