@@ -185,9 +185,9 @@
       </div>
     </div>
     <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
-      <a id="btnResponderAcademia" href="{{ url_for('surveys_fill.respond_page', form=2, Assignment_ID=1, academia='Academia', number='150339', name='Ruben Morais', api_key=config['SECRET_KEY']) }}" class="btn-sv-secondary" target="_blank" rel="opener">
+      {#<a id="btnResponderAcademia" href="{{ url_for('surveys_fill.respond_page', form=3, Assignment_ID=2, tipo='Academia', number='150339', name='Ruben Morais', api_key=config['SECRET_KEY']) }}" class="btn-sv-secondary" target="_blank" rel="opener">
         <i class="fas fa-graduation-cap"></i> Responder Academia
-      </a>
+      </a>#}
       <button id="btnNovoFormulario" class="btn-sv-primary">
         <i class="fas fa-plus"></i> Novo Formulário
       </button>
@@ -510,10 +510,10 @@
       window.location.href = '/surveys/new';
     });
 
-    document.getElementById('btnResponderAcademia').addEventListener('click', function (event) {
+    /*document.getElementById('btnResponderAcademia').addEventListener('click', function (event) {
       event.preventDefault();
       window.open(this.href, '_blank');
-    });
+    });*/
 
     loadForms();
   });

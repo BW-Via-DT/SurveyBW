@@ -117,3 +117,35 @@
   from { transform: scale(0) rotate(-30deg); opacity: 0; }
   to { transform: scale(1) rotate(0); opacity: 1; }
 }
+/* Enunciado: respeita a quebra de linha (só afeta o texto das perguntas) */
+.question-section .form-label {
+  white-space: pre-line;
+}
+
+/* Opções de escolha (single/multiple choice) - NÃO afeta os ratings */
+.question-section > .mb-3 > .form-check {
+  padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+  margin-bottom: 0.4rem;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  transition: background-color .15s, border-color .15s;
+}
+
+.question-section > .mb-3 > .form-check:hover {
+  background: #f1f5f9;
+  border-color: #0b2239;
+}
+
+.question-section > .mb-3 > .form-check:has(.form-check-input:checked) {
+  background: #e8eef5;
+  border-color: #0b2239;
+}
+
+.question-section > .mb-3 > .form-check .form-check-label {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #1f2937;
+}
